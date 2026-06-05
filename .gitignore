@@ -1,0 +1,15 @@
+# runtime / user data - never commit
+wal_log.sqlite
+wal_log.sqlite-journal
+wal_log.sqlite-wal
+wal_log.sqlite-shm
+backups/
+macro_*.*
+
+# generated TLS for the phone GPS page (per-machine)
+cert.pem
+key.pem
+.certip
+
+__pycache__/
+*.pyc

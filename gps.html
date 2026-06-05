@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>WAL GPS</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;font:16px system-ui,Segoe UI,Roboto,sans-serif;background:#0f141b;color:#e7eef7;
+       min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
+  .sq{font-size:96px;font-weight:800;letter-spacing:4px;color:#37d67a;line-height:1;margin:8px 0}
+  .lbl{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:#8aa0bd}
+  .info{color:#8aa0bd;font-size:14px;margin-top:14px;line-height:1.7}
+  .info b{color:#4aa8ff}
+  .pill{display:inline-flex;align-items:center;gap:8px;margin-top:18px;padding:8px 16px;border-radius:20px;font-size:14px;
+        background:#172230;border:1px solid #26344a;color:#8aa0bd}
+  .pill.ok{border-color:#37d67a;color:#37d67a}
+  .pill.bad{border-color:#ff5d5d;color:#ff5d5d}
+  .dot{width:10px;height:10px;border-radius:50%;background:#37d67a}
+  .pill.ok .dot{animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.25}}
+  button{margin-top:22px;background:#37d67a;color:#04130a;border:0;border-radius:10px;
+         padding:16px 30px;font-size:18px;font-weight:800}
+  .note{margin-top:18px;font-size:12px;color:#5b6f8c;max-width:320px}
+</style>
+</head>
+<body>
+  <div class="lbl">Tavo WAL skveras</div>
+  <div class="sq" id="sq">--</div>
+  <div class="info" id="info">Paspausk mygtuką ir leisk vietos prieigą</div>
+  <div class="pill" id="pill"><span class="dot" style="background:#5b6f8c"></span><span id="pilltxt">laukiama</span></div>
+  <button id="go">Įjungti GPS</button>
+  <div class="note" id="note">Ekranas liks įjungtas (wake lock). Jei užrakinsi telefoną, atrakinus siuntimas tęsis automatiškai.</div>
+
+<script>
+const LAT0=56.5, LON0=20+50/60, STEP=10/60, A="ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function wal(lat,lon){
+  const r=Math.floor(-(lat-LAT0)/STEP), c=Math.floor((lon-LON0)/STEP);
+  if(r<0||r>=26||c<0) return null;
+  return A[r]+String(c).padStart(2,"0");
+}
+let lastPos=null, sentCount=0, lastSentAt=0, wl=null, watchId=null;
+
+function setPill(cls,txt){ document.getElementById("pill").className="pill "+cls; document.getElementById("pilltxt").textContent=txt; }
+
+function onPos(p){
+  lastPos={la:p.coords.latitude, lo:p.coords.longitude, ac:p.coords.accuracy};
+  const sq=wal(lastPos.la,lastPos.lo);
+  document.getElementById("sq").textContent=sq||"??";
+  document.getElementById("info").innerHTML="<b>"+lastPos.la.toFixed(5)+"</b>, <b>"+lastPos.lo.toFixed(5)+
+    "</b><br>tikslumas ±"+Math.round(lastPos.ac)+" m";
+}
+function onErr(e){ setPill("bad","GPS klaida: "+e.message); }
+
+function send(){
+  if(!lastPos) return;
+  fetch("/api/gps",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({lat:lastPos.la,lon:lastPos.lo})})
+    .then(()=>{ sentCount++; lastSentAt=Date.now(); setPill("ok","siunčiama ("+sentCount+")"); })
+    .catch(()=>setPill("bad","nėra ryšio su laptopu"));
+}
+
+async function acquireWake(){
+  try{ if("wakeLock" in navigator){ wl=await navigator.wakeLock.request("screen");
+        wl.addEventListener("release",()=>{}); } }catch(e){}
+}
+// re-acquire wake lock + make sure GPS is still watching after unlock / tab switch
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible"){ acquireWake(); if(watchId===null) startWatch(); }
+});
+
+function startWatch(){
+  if(!navigator.geolocation){ setPill("bad","nėra geolocation"); return; }
+  watchId=navigator.geolocation.watchPosition(onPos,onErr,
+    {enableHighAccuracy:true, maximumAge:2000, timeout:20000});
+}
+
+document.getElementById("go").onclick=()=>{
+  setPill("","jungiamasi...");
+  acquireWake();
+  startWatch();
+  // heartbeat: re-send last known position every 5 s (keeps laptop fresh even when parked)
+  setInterval(send, 5000);
+};
+// liveness counter on the pill
+setInterval(()=>{ if(lastSentAt){ const s=Math.round((Date.now()-lastSentAt)/1000);
+  if(s<=8) setPill("ok","siunčiama ("+sentCount+") · "+s+"s"); else setPill("bad","pristabdyta "+s+"s - patapšnok ekraną"); } },1000);
+</script>
+</body>
+</html>

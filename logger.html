@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WAL Contest Logger</title>
+<style>
+  :root{--bg:#0f141b;--panel:#172230;--line:#26344a;--ink:#e7eef7;--mut:#8aa0bd;
+        --accent:#37d67a;--warn:#ffb020;--bad:#ff5d5d;--blue:#4aa8ff}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{display:flex;gap:16px;align-items:center;padding:10px 16px;background:var(--panel);
+         border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .brand{font-weight:800;letter-spacing:.5px}
+  label.cap{color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;display:block}
+  .mycall input{background:#0c1220;border:1px solid var(--line);color:var(--ink);
+         border-radius:6px;padding:6px 8px;width:110px;font-weight:700}
+  .modes{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .modes button{background:#0c1220;color:var(--mut);border:0;padding:8px 14px;font-weight:700;cursor:pointer}
+  .modes button.on{background:var(--blue);color:#04101e}
+  #freq{background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px;width:76px}
+  .catsel{background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px;font-weight:700}
+  .clockbox{margin-left:auto;text-align:center}
+  .clock{font-variant-numeric:tabular-nums;font-weight:800;font-size:19px;color:var(--ink);display:block;letter-spacing:1px}
+  .round{text-align:center;background:#0c1220;border:1px solid var(--line);
+         border-radius:10px;padding:4px 14px;min-width:150px}
+  .rbig{font-size:20px;font-weight:800;color:var(--blue)}
+  .rbig.live{color:var(--accent)}
+  .rsub{font-size:11px;color:var(--mut)}
+  .gps{font-size:12px;color:var(--mut);min-width:150px;text-align:right}
+  .gps b{color:var(--blue)}
+  .sent{display:flex;flex-direction:column;align-items:center}
+  .sent input{font-size:32px;font-weight:800;letter-spacing:2px;width:132px;text-align:center;
+         background:#0c1220;border:2px solid var(--accent);color:var(--accent);border-radius:10px;padding:1px 6px}
+  .sent input.empty{border-color:var(--warn);color:var(--warn)}
+  main{display:grid;grid-template-columns:1.35fr .65fr;gap:14px;padding:14px}
+  @media(max-width:920px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--mut)}
+  .entry{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+  .fld{display:flex;flex-direction:column;gap:4px}
+  .fld input{background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px;font-size:20px}
+  #call{width:170px;text-transform:uppercase;font-weight:700}
+  #rcv{width:120px;text-transform:uppercase;font-weight:700}
+  .rst{width:62px;text-align:center}
+  .logbtn{background:var(--accent);color:#04130a;border:0;border-radius:8px;padding:12px 26px;
+         font-size:18px;font-weight:800;cursor:pointer}
+  .keyer{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 14px 0;
+         padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+  .slot{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:8px;padding:4px}
+  .kplay{background:#1d2b40;color:var(--ink);border:0;border-radius:6px;padding:9px 12px;font-weight:700;cursor:pointer;min-width:78px}
+  .kplay.has{background:var(--blue);color:#04101e}
+  .kplay.playing{background:var(--accent);color:#04130a}
+  .klabel{width:54px;background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:5px;font-size:12px}
+  .kmini{background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:6px;padding:6px 7px;cursor:pointer;font-size:12px}
+  .kmini.recording{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .kstop{margin-left:auto;background:#33455e;color:var(--ink);border:0;border-radius:8px;padding:9px 12px;cursor:pointer}
+  .hint{min-height:20px;margin-top:8px;font-size:13px}
+  .hint .dupe{color:var(--warn);font-weight:700}.hint .ok{color:var(--accent)}.hint .bad{color:var(--bad)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase}
+  td.sq{color:var(--accent);font-weight:700}
+  td.act{cursor:pointer;color:var(--mut);text-align:center}
+  td.act:hover{color:var(--ink)}
+  .erow input,.erow select{background:#0c1220;border:1px solid var(--blue);color:var(--ink);
+         border-radius:5px;padding:4px;margin:1px;font-size:12px}
+  .ebtn{background:var(--accent);color:#04130a;border:0;border-radius:5px;padding:4px 9px;font-weight:700;cursor:pointer}
+  .ebtn.c{background:#33455e;color:var(--ink)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .stat{background:#0c1220;border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center}
+  .stat b{display:block;font-size:23px}.stat span{font-size:11px;color:var(--mut);text-transform:uppercase}
+  .score b{color:var(--accent)}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 2px}
+  .tools a,.tools button{background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:8px;
+         padding:8px 12px;text-decoration:none;font-size:13px;cursor:pointer}
+  .tools button.wipe{border-color:transparent;background:transparent;color:#3c4d66;margin-left:auto;
+         font-size:11px;padding:6px 8px;opacity:.6}
+  .tools button.wipe:hover{border-color:var(--bad);color:var(--bad);opacity:1}
+  #map{display:flex;justify-content:center;margin-top:6px}
+  #map svg{max-height:300px}
+  #map rect{fill:#1c2a40;stroke:#0f141b;stroke-width:.3}
+  #map rect.w{fill:var(--accent)}
+  #map text.axn{fill:#5b6f8c;font-size:6.5px;text-anchor:middle}
+  #map text.axl{fill:#7c92b2;font-size:8px;text-anchor:end;dominant-baseline:central;font-weight:700}
+  .maplbl{font-size:11px;color:var(--mut);text-align:center;margin-top:4px}
+</style>
+</head>
+<body>
+<header>
+  <span class="brand">WAL LOGGER</span>
+  <span class="mycall"><label class="cap">Mano</label><input id="mycall"></span>
+  <span class="mycall"><label class="cap">Vardas</label><input id="name" style="width:96px;font-weight:400"></span>
+  <span><label class="cap">Kat.</label><select id="category" class="catsel">
+    <option>M</option><option>P</option><option>S</option><option>K</option><option>SWL</option><option>KL</option></select></span>
+  <span><label class="cap">Modas</label>
+    <span class="modes"><button id="mSSB" class="on">SSB</button><button id="mCW">CW</button></span></span>
+  <span><label class="cap">kHz</label><input id="freq" value="3600"></span>
+  <span class="clockbox"><label class="cap">UTC</label><span class="clock" id="clock">--:--:--</span></span>
+  <div class="round"><div class="rbig" id="rbig">TURAS -</div><div class="rsub" id="rsub">-</div></div>
+  <span class="gps" id="gps">GPS: -</span>
+  <span class="sent"><label class="cap">Sent WAL</label><input id="sent" maxlength="4" placeholder="--" autocomplete="off"></span>
+</header>
+
+<div class="keyer" id="keyer">
+  <span class="cap" style="align-self:center">Papūga</span>
+  <div class="slot" data-n="1"></div>
+  <div class="slot" data-n="2"></div>
+  <div class="slot" data-n="3"></div>
+  <button class="kstop" id="kstop">⏹ Stop (Esc)</button>
+</div>
+
+<main>
+  <section class="card">
+    <h2>Ryšys</h2>
+    <div class="entry">
+      <div class="fld"><label class="cap">Call</label><input id="call" autocomplete="off"></div>
+      <div class="fld"><label class="cap">RST snt</label><input id="rsts" class="rst" value="59"></div>
+      <div class="fld"><label class="cap">RST rcv</label><input id="rstr" class="rst" value="59"></div>
+      <div class="fld"><label class="cap">Rcv WAL</label><input id="rcv" autocomplete="off" placeholder="A18 / DX"></div>
+      <button class="logbtn" id="log">Log It ⏎</button>
+    </div>
+    <div class="hint" id="hint"></div>
+
+    <h2 style="margin-top:18px">Žurnalas</h2>
+    <table><thead><tr>
+      <th>UTC</th><th>Turas</th><th>Call</th><th>Md</th><th>Snt</th><th>RST</th><th>Rcv</th><th>P</th><th></th><th></th>
+    </tr></thead><tbody id="log-body"></tbody></table>
+  </section>
+
+  <section class="card">
+    <h2>Rezultatas (apytikslis)</h2>
+    <div class="stats">
+      <div class="stat"><b id="s-qso">0</b><span>QSO</span></div>
+      <div class="stat"><b id="s-pts">0</b><span>Taškai</span></div>
+      <div class="stat score"><b id="s-score">0</b><span>Score</span></div>
+      <div class="stat"><b id="s-sq">0</b><span>Skverai</span></div>
+      <div class="stat"><b id="s-own">0</b><span>Savi sk.</span></div>
+      <div class="stat"><b id="s-dx">0</b><span>DX šalys</span></div>
+    </div>
+    <div class="tools"><a href="/export/cabrillo">⬇ Cabrillo</a><a href="/export/adif">⬇ ADIF</a><button id="backup">💾 Kopija</button><button id="wipe" class="wipe">🗑 Naujas</button></div>
+    <h2 style="margin-top:16px">Lietuva - WAL skverai</h2>
+    <div id="map"></div>
+    <div class="maplbl" id="maplbl">žali = padaryti</div>
+  </section>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+let mode="SSB", valid=[], worked=new Set(), qsos=[], totalQsos=0;
+
+function api(p,b){return fetch(p,b?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}:undefined).then(r=>r.json());}
+
+// ---- mode + band (header)
+function applyMode(m,push){
+  mode=m; $("#mSSB").classList.toggle("on",m==="SSB"); $("#mCW").classList.toggle("on",m==="CW");
+  const def=m==="CW"?"599":"59";
+  if($("#rsts").value.match(/^\d+$/))$("#rsts").value=def;
+  if($("#rstr").value.match(/^\d+$/))$("#rstr").value=def;
+  if(push)saveBand();
+}
+function saveBand(){api("/api/band",{mode,freq:parseInt($("#freq").value)||3600});}
+$("#mSSB").onclick=()=>applyMode("SSB",true);
+$("#mCW").onclick=()=>applyMode("CW",true);
+$("#freq").onchange=saveBand;
+$("#mycall").onchange=e=>api("/api/mycall",{mycall:e.target.value});
+$("#sent").onchange=e=>api("/api/sent",{wal:e.target.value});
+$("#name").onchange=e=>api("/api/cfgset",{key:"name",value:e.target.value});
+$("#category").onchange=e=>api("/api/cfgset",{key:"category",value:e.target.value});
+$("#backup").onclick=()=>api("/api/backup").then(r=>{$("#hint").innerHTML='<span class="ok">💾 Kopija išsaugota: '+(r.backup||"-")+'</span>';});
+$("#wipe").onclick=()=>{
+  const n=$("#s-qso").textContent;
+  if(!confirm("Išvalyti žurnalą? Bus ištrinta "+n+" QSO.\nAtsarginė kopija išsaugoma automatiškai. Papūga ir nustatymai lieka."))return;
+  api("/api/wipe").then(r=>{$("#hint").innerHTML='<span class="ok">Išvalyta ('+r.cleared+' QSO). Kopija: '+(r.backup||"-")+'</span>';refresh();$("#call").focus();});
+};
+
+// ---- hints
+let ht;
+$("#call").addEventListener("input",()=>{clearTimeout(ht);ht=setTimeout(checkDupe,180);});
+$("#rcv").addEventListener("input",showValid);
+// Tab from Call -> jump straight to Rcv WAL, prefilling the square if we worked this call before
+$("#call").addEventListener("keydown",e=>{
+  if(e.key==="Tab"&&!e.shiftKey){
+    e.preventDefault();
+    const call=$("#call").value.trim().toUpperCase();
+    $("#rcv").focus();
+    if(call.length>=3) api("/api/dupe",{call,mode}).then(d=>{
+      if(d.last_rcv&&!$("#rcv").value){$("#rcv").value=d.last_rcv;$("#rcv").select();showValid();}
+    });
+  }
+});
+function showValid(){
+  const v=$("#rcv").value.trim().toUpperCase(),h=$("#hint");
+  if(!v)return;
+  if(v==="DX"){h.innerHTML='<span class="ok">DX - užsienio stotis (1 tšk)</span>';return;}
+  h.innerHTML=valid.includes(v)?'<span class="ok">'+v+' galioja</span>':'<span class="bad">'+v+' nėra WAL sąraše</span>';
+}
+function checkDupe(){
+  const call=$("#call").value.trim().toUpperCase(); if(call.length<3)return;
+  api("/api/dupe",{call,mode}).then(d=>{ if(d.count>0)
+    $("#hint").innerHTML='<span class="dupe">⚠ '+call+' jau ture '+(d.round||"-")+' ('+mode+'), praeitas: '+d.prev_rcv+'</span>'; });
+}
+
+// ---- logging
+function logQso(){
+  const call=$("#call").value.trim().toUpperCase(), rcv=$("#rcv").value.trim().toUpperCase();
+  if(!call||!rcv){$("#hint").innerHTML='<span class="bad">Reikia Call ir Rcv WAL</span>';return;}
+  api("/api/qso",{call,rcv_wal:rcv,mode,rst_s:$("#rsts").value,rst_r:$("#rstr").value,
+    sent_wal:$("#sent").value,freq_khz:parseInt($("#freq").value)||3600}).then(r=>{
+    if(!r.ok){$("#hint").innerHTML='<span class="bad">'+(r.error||"klaida")+'</span>';return;}
+    $("#call").value="";$("#rcv").value="";$("#hint").textContent="+"+r.points+" tšk";$("#call").focus();refresh();
+  });
+}
+$("#log").onclick=logQso;
+function wipeEntry(){stopMacro();$("#call").value="";$("#rcv").value="";$("#hint").textContent="";$("#call").focus();}
+document.addEventListener("keydown",e=>{
+  if(e.key==="Enter"&&["call","rcv","rstr"].includes(e.target.id))logQso();
+  if(e.key==="Escape")wipeEntry();
+  // Ctrl+W = wipe entry (N1MM muscle memory) instead of closing the tab
+  if((e.ctrlKey||e.metaKey)&&(e.key==="w"||e.key==="W")){e.preventDefault();e.stopPropagation();wipeEntry();}
+  if(e.key==="F1"||e.key==="F2"||e.key==="F3"){e.preventDefault();playMacro(e.key[1]);}
+},true);
+// safety net: if the tab is about to close (e.g. Ctrl+W slipped through), ask first - but only once logging
+window.addEventListener("beforeunload",e=>{ if(totalQsos>0){ e.preventDefault(); e.returnValue=""; } });
+
+// ---- voice keyer (balso papūga)
+let curAudio=null, recorders={};
+function loadKeyer(){return api("/api/macros").then(renderKeyer);}
+function renderKeyer(m){
+  for(const n of ["1","2","3"]){
+    const slot=document.querySelector('.slot[data-n="'+n+'"]'), info=m[n]||{};
+    slot.innerHTML=
+      '<button class="kplay'+(info.has?' has':'')+'" data-n="'+n+'">F'+n+' '+(info.label||"")+'</button>'+
+      '<input class="klabel" data-n="'+n+'" value="'+(info.label||"")+'" title="pavadinimas">'+
+      '<button class="kmini rec" data-n="'+n+'" title="Įrašyti iš mikrofono">⏺</button>'+
+      '<button class="kmini up" data-n="'+n+'" title="Įkelti garso failą">📁</button>';
+  }
+  document.querySelectorAll(".kplay").forEach(b=>b.onclick=()=>playMacro(b.dataset.n));
+  document.querySelectorAll(".klabel").forEach(i=>i.onchange=()=>api("/api/macrolabel",{n:i.dataset.n,label:i.value}).then(loadKeyer));
+  document.querySelectorAll(".kmini.rec").forEach(b=>b.onclick=()=>toggleRec(b));
+  document.querySelectorAll(".kmini.up").forEach(b=>b.onclick=()=>uploadMacro(b.dataset.n));
+}
+function playMacro(n){
+  stopMacro();
+  const el=document.querySelector('.kplay[data-n="'+n+'"]');
+  curAudio=new Audio("/macro/"+n+"?"+Date.now());
+  curAudio.onended=()=>{if(el)el.classList.remove("playing");curAudio=null;};
+  curAudio.onerror=()=>{$("#hint").innerHTML='<span class="bad">F'+n+': nėra įrašo</span>';};
+  curAudio.play().then(()=>{if(el)el.classList.add("playing");}).catch(()=>{});
+}
+function stopMacro(){ if(curAudio){curAudio.pause();curAudio=null;} document.querySelectorAll(".kplay.playing").forEach(b=>b.classList.remove("playing")); }
+$("#kstop").onclick=stopMacro;
+async function toggleRec(btn){
+  const n=btn.dataset.n;
+  if(recorders[n]){recorders[n].stop();return;}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const mr=new MediaRecorder(stream), chunks=[];
+    mr.ondataavailable=e=>chunks.push(e.data);
+    mr.onstop=()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:mr.mimeType||"audio/webm"});
+      fetch("/api/macro/"+n,{method:"POST",headers:{"Content-Type":blob.type},body:blob}).then(()=>{recorders[n]=null;loadKeyer();});
+    };
+    mr.start(); recorders[n]=mr; btn.classList.add("recording"); btn.textContent="⏹";
+  }catch(err){$("#hint").innerHTML='<span class="bad">Mikrofonas neprieinamas: '+err.message+'</span>';}
+}
+function uploadMacro(n){
+  const inp=document.createElement("input"); inp.type="file"; inp.accept="audio/*";
+  inp.onchange=()=>{const f=inp.files[0]; if(f)fetch("/api/macro/"+n,{method:"POST",headers:{"Content-Type":f.type||"audio/wav"},body:f}).then(()=>loadKeyer());};
+  inp.click();
+}
+
+// ---- log table + inline edit
+function row(r){
+  const t=new Date(r.ts_utc), hh=String(t.getUTCHours()).padStart(2,"0")+":"+String(t.getUTCMinutes()).padStart(2,"0");
+  return '<tr data-id="'+r.id+'"><td>'+hh+'</td><td>'+(r.rnd||"-")+'</td><td><b>'+r.call+'</b></td><td>'+r.mode+
+    '</td><td>'+r.sent_wal+'</td><td>'+r.rst_s+'/'+r.rst_r+'</td><td class="sq">'+r.rcv_wal+'</td><td>'+r.points+
+    '</td><td class="act edit" data-id="'+r.id+'">✎</td><td class="act del" data-id="'+r.id+'">✕</td></tr>';
+}
+function bindRows(){
+  document.querySelectorAll("td.del").forEach(td=>td.onclick=()=>api("/api/qso/delete",{id:+td.dataset.id}).then(refresh));
+  document.querySelectorAll("td.edit").forEach(td=>td.onclick=()=>startEdit(+td.dataset.id));
+}
+function startEdit(id){
+  const r=qsos.find(q=>q.id===id); if(!r)return;
+  const tr=document.querySelector('tr[data-id="'+id+'"]'); tr.className="erow";
+  tr.innerHTML='<td colspan="10">'+
+    'Call <input class="e-call" value="'+r.call+'" style="width:90px">'+
+    ' <select class="e-mode"><option'+(r.mode==="SSB"?" selected":"")+'>SSB</option><option'+(r.mode==="CW"?" selected":"")+'>CW</option></select>'+
+    ' Snt <input class="e-sent" value="'+r.sent_wal+'" style="width:55px">'+
+    ' Rcv <input class="e-rcv" value="'+r.rcv_wal+'" style="width:60px">'+
+    ' RST <input class="e-rsts" value="'+r.rst_s+'" style="width:48px"><input class="e-rstr" value="'+r.rst_r+'" style="width:48px">'+
+    ' <button class="ebtn save">Išsaugoti</button> <button class="ebtn c cancel">Atšaukti</button></td>';
+  tr.querySelector(".save").onclick=()=>api("/api/qso/update",{id,
+    call:tr.querySelector(".e-call").value,mode:tr.querySelector(".e-mode").value,
+    sent_wal:tr.querySelector(".e-sent").value,rcv_wal:tr.querySelector(".e-rcv").value,
+    rst_s:tr.querySelector(".e-rsts").value,rst_r:tr.querySelector(".e-rstr").value}).then(refresh);
+  tr.querySelector(".cancel").onclick=refresh;
+  tr.querySelector(".e-call").focus();
+}
+
+// ---- Lithuania map from the valid squares
+function buildMap(){
+  const cells=valid.filter(s=>s!=="DX").map(s=>({s,row:s.charCodeAt(0)-65,col:parseInt(s.slice(1))}));
+  const maxCol=Math.max.apply(null,cells.map(c=>c.col));
+  const cw=13, ch=15, LM=15, TM=12;                        // ch>cw -> real LT proportions; LM/TM = axis margins
+  const W=LM+(maxCol+1)*cw, H=TM+16*ch;
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
+  for(let c=0;c<=maxCol;c++) svg+='<text class="axn" x="'+(LM+c*cw+cw/2)+'" y="'+(TM-3)+'">'+c+'</text>';
+  for(let r=0;r<16;r++) svg+='<text class="axl" x="'+(LM-3)+'" y="'+(TM+r*ch+ch/2)+'">'+String.fromCharCode(65+r)+'</text>';
+  for(const c of cells) svg+='<rect data-s="'+c.s+'" x="'+(LM+c.col*cw)+'" y="'+(TM+c.row*ch)+
+    '" width="'+(cw-0.6)+'" height="'+(ch-0.6)+'" rx="1"><title>'+c.s+'</title></rect>';
+  $("#map").innerHTML=svg+'</svg>';
+}
+function paintMap(){document.querySelectorAll("#map rect").forEach(r=>r.classList.toggle("w",worked.has(r.dataset.s)));}
+
+// ---- round badge + clock
+function paintRound(s){
+  const cr=s.current_round, ut=new Date(s.utc);
+  const rb=$("#rbig"), rs=$("#rsub"), rc=s.stats.rounds||{};
+  const counts="T1:"+(rc[1]||0)+" T2:"+(rc[2]||0)+" T3:"+(rc[3]||0);
+  if(cr>=1&&cr<=3){
+    const left=59-ut.getUTCMinutes();
+    rb.textContent="TURAS "+cr; rb.classList.add("live");
+    rs.textContent="liko "+left+" min · "+counts;
+  } else {
+    rb.textContent="TURAS -"; rb.classList.remove("live");
+    rs.textContent=(ut.getUTCHours()<6?"prieš startą · ":"po varžybų · ")+counts;
+  }
+}
+
+// ---- refresh
+function refresh(){
+  api("/api/state").then(s=>{
+    if(document.activeElement!==$("#sent"))$("#sent").value=s.sent_wal||"";
+    $("#sent").classList.toggle("empty",!$("#sent").value);
+    if(document.activeElement!==$("#mycall"))$("#mycall").value=s.mycall||"";
+    if(document.activeElement!==$("#freq"))$("#freq").value=s.freq||"3600";
+    if(document.activeElement!==$("#name"))$("#name").value=s.name||"";
+    if(s.category&&$("#category").value!==s.category)$("#category").value=s.category;
+    if(s.mode&&s.mode!==mode)applyMode(s.mode,false);
+    let g="GPS: rankinis";
+    if(s.sent_source==="gps"&&s.gps_ts){const age=Math.round((Date.now()-new Date(s.gps_ts))/1000);
+      const col=age>30?"#ff5d5d":(age>12?"#ffb020":"#37d67a");
+      g='GPS: <b>'+(s.sent_wal||"?")+'</b> · <span style="color:'+col+'">'+age+'s</span>'+(age>30?" ⚠":"");}
+    $("#gps").innerHTML=g;
+    const st=s.stats;
+    totalQsos=st.qsos;
+    $("#s-qso").textContent=st.qsos;$("#s-pts").textContent=st.points;$("#s-score").textContent=st.score;
+    $("#s-sq").textContent=st.squares;$("#s-own").textContent=st.own_squares;$("#s-dx").textContent=st.dx_countries;
+    worked=new Set(st.worked_squares); paintMap(); paintRound(s);
+  });
+  api("/api/qsos").then(rows=>{qsos=rows; $("#log-body").innerHTML=rows.map(row).join(""); bindRows();});
+}
+
+// ---- init
+function tick(){const d=new Date(),p=n=>String(n).padStart(2,"0");
+  $("#clock").textContent=p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds());}
+api("/api/valid").then(v=>{valid=v; buildMap(); applyMode("SSB",false); refresh(); $("#call").focus();});
+loadKeyer(); tick();
+setInterval(refresh,2500);
+setInterval(tick,1000);
+</script>
+</body>
+</html>
