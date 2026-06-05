@@ -13,3 +13,10 @@ key.pem
 
 __pycache__/
 *.pyc
+
+# APRS map is a separate project - not part of this repo
+aprs_wal.py
+aprs_probe.py
+aprs_map.html
+Start APRS Map.bat
+lt_outline.json

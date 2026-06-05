@@ -2,4 +2,3 @@
 # Install:  python -m pip install -r requirements.txt   (or run install.bat)
 
 cryptography      # HTTPS for the phone-GPS page (https://<ip>:8443/gps)
-aprslib           # APRS companion map (aprs_wal.py) - live LY stations on the WAL grid

@@ -22,7 +22,7 @@ if errorlevel 1 (
 
 python --version
 echo.
-echo Diegiu Python paketus ^(cryptography, aprslib^)...
+echo Diegiu Python paketus ^(cryptography^)...
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 if errorlevel 1 (
@@ -33,8 +33,6 @@ if errorlevel 1 (
 )
 
 echo.
-echo [OK] Viskas idiegta.
-echo     Loggeris:    "Start WAL Logger.bat"
-echo     APRS zemelapis: "Start APRS Map.bat"
+echo [OK] Viskas idiegta. Paleisk "Start WAL Logger.bat"
 echo.
 pause

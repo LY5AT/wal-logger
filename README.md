@@ -12,7 +12,7 @@ Reikia tik Python 3. Trys žingsniai:
 2. **Parsisiųsk projektą** - vienas iš:
    - `git clone https://github.com/LY5AT/wal-logger.git`  (ar `gh repo clone LY5AT/wal-logger`), arba
    - GitHub puslapyje **Code -> Download ZIP** -> išarchyvuok.
-3. Aplanke dukart spustelėk **`install.bat`** (įdiegs `cryptography` ir `aprslib`).
+3. Aplanke dukart spustelėk **`install.bat`** (įdiegs `cryptography`).
 
 Tada paleisk **`Start WAL Logger.bat`**. (Jei 3 žingsnį praleidai - pirmą kartą jis priklausomybes įdiegs pats.)
 
@@ -96,20 +96,3 @@ jei programą perkrauni varžybų metu, kvadratas neprapuola. Patikrinta: net st
 ## Score
 Rodomas **apytikslis** rezultatas (taškai x daugiklis). Galutinį skaičiuoja organizatoriai iš Cabrillo.
 Daugiklis = skirtingi gauti kvadratai + savi aktyvuoti kvadratai (/m) + DX šalys.
-
-## APRS žemėlapis (atskiras įrankis)
-
-`aprs_wal.py` - rodo **gyvas APRS stotis Lietuvoje ant WAL kvadratų žemėlapio**. Naudinga matyti
-kur juda mobilieji (kas beaconina APRS 144.800). Veikia atskirai nuo loggerio (portas 8783),
-gali suktis kartu.
-
-- Paleidimas: **`Start APRS Map.bat`** (pirmą kartą įdiegs `aprslib`). Atsidaro http://localhost:8783
-- Jungiasi read-only prie APRS-IS (LY5AT, passcode -1), filtras = Lietuvos plotas.
-- Parsina ir Mic-E (mobilūs), ir įprastus paketus -> lat/lon -> WAL kvadratas (ta pati formulė).
-- Žemėlapis: LY stotys žalios, kitos mėlynos, judantys /m mirksi; kvadratas su stotimi pašviesinamas.
-  Dešinėje - sąrašas (call / WAL / km/h / prieš kiek). Prie žymeklio - šaukinys ir greitis (`LY5AT-4 · 45`).
-- **„Tik judantys"** (įjungta pagal nutylėjimą) - rodo tik judančias stotis, slepia fiksuotas (digipeateriai,
-  orų st.). „Juda" = realiai pajudėjo (arba greitis > 0), tad sustojęs /m operuoti vis tiek lieka.
-- **Pėdsakas (breadcrumb)**: kiekvienos stoties paskutinių pozicijų linija - matosi kelias tarp kvadratų.
-- Stotys atsiranda po truputį (APRS beaconai kas kelias min); senesnės nei 35 min dingsta.
-- Reikalauja interneto. Priklausomybė: `aprslib` (pip).
