@@ -93,6 +93,7 @@
   <span class="mycall"><label class="cap">Vardas</label><input id="name" style="width:96px;font-weight:400"></span>
   <span><label class="cap">Kat.</label><select id="category" class="catsel">
     <option>M</option><option>P</option><option>S</option><option>K</option><option>SWL</option><option>KL</option></select></span>
+  <span style="text-align:center"><label class="cap">LY pref.</label><input type="checkbox" id="lydef" style="width:18px;height:18px;margin-top:6px;cursor:pointer"></span>
   <span><label class="cap">Modas</label>
     <span class="modes"><button id="mSSB" class="on">SSB</button><button id="mCW">CW</button></span></span>
   <span><label class="cap">kHz</label><input id="freq" value="3600"></span>
@@ -149,7 +150,12 @@
 
 <script>
 const $ = s => document.querySelector(s);
-let mode="SSB", valid=[], worked=new Set(), qsos=[], totalQsos=0, editingId=null;
+let mode="SSB", valid=[], worked=new Set(), qsos=[], totalQsos=0, editingId=null, lyDefault=true;
+function resetCall(){
+  $("#call").value=lyDefault?"LY":"";
+  $("#call").focus();
+  const v=$("#call").value; try{$("#call").setSelectionRange(v.length,v.length);}catch(e){}
+}
 
 function api(p,b){return fetch(p,b?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}:undefined).then(r=>r.json());}
 
@@ -170,6 +176,7 @@ $("#sent").onchange=e=>api("/api/sent",{wal:e.target.value});
 $("#name").onchange=e=>api("/api/cfgset",{key:"name",value:e.target.value});
 $("#category").onchange=e=>api("/api/cfgset",{key:"category",value:e.target.value});
 $("#roundov").onchange=e=>api("/api/cfgset",{key:"round_override",value:e.target.value}).then(refresh);
+$("#lydef").onchange=e=>{lyDefault=e.target.checked;api("/api/cfgset",{key:"ly_default",value:e.target.checked?"1":"0"});resetCall();};
 $("#backup").onclick=()=>api("/api/backup").then(r=>{$("#hint").innerHTML='<span class="ok">💾 Kopija išsaugota: '+(r.backup||"-")+'</span>';});
 $("#wipe").onclick=()=>{
   const n=$("#s-qso").textContent;
@@ -211,11 +218,11 @@ function logQso(){
   api("/api/qso",{call,rcv_wal:rcv,mode,rst_s:$("#rsts").value,rst_r:$("#rstr").value,
     sent_wal:$("#sent").value,freq_khz:parseInt($("#freq").value)||3600}).then(r=>{
     if(!r.ok){$("#hint").innerHTML='<span class="bad">'+(r.error||"klaida")+'</span>';return;}
-    $("#call").value="";$("#rcv").value="";$("#hint").textContent="+"+r.points+" tšk";$("#call").focus();refresh();
+    $("#rcv").value="";$("#hint").textContent="+"+r.points+" tšk";resetCall();refresh();
   });
 }
 $("#log").onclick=logQso;
-function wipeEntry(){stopMacro();$("#call").value="";$("#rcv").value="";$("#hint").textContent="";$("#call").focus();}
+function wipeEntry(){stopMacro();$("#rcv").value="";$("#hint").textContent="";resetCall();}
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter"&&["call","rcv","rstr"].includes(e.target.id))logQso();
   if(e.key==="Escape")wipeEntry();
@@ -347,6 +354,7 @@ function refresh(){
     if(document.activeElement!==$("#name"))$("#name").value=s.name||"";
     if(s.category&&$("#category").value!==s.category)$("#category").value=s.category;
     if(document.activeElement!==$("#roundov"))$("#roundov").value=s.round_override||"0";
+    lyDefault=(s.ly_default!=="0"); if(document.activeElement!==$("#lydef"))$("#lydef").checked=lyDefault;
     if(s.mode&&s.mode!==mode)applyMode(s.mode,false);
     let g="GPS: rankinis";
     if(s.sent_source==="gps"&&s.gps_ts){const age=Math.round((Date.now()-new Date(s.gps_ts))/1000);
@@ -365,7 +373,7 @@ function refresh(){
 // ---- init
 function tick(){const d=new Date(),p=n=>String(n).padStart(2,"0");
   $("#clock").textContent=p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds());}
-api("/api/valid").then(v=>{valid=v; buildMap(); applyMode("SSB",false); refresh(); $("#call").focus();});
+api("/api/valid").then(v=>{valid=v; buildMap(); applyMode("SSB",false); refresh(); resetCall();});
 loadKeyer(); tick();
 setInterval(refresh,2500);
 setInterval(tick,1000);

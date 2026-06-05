@@ -120,7 +120,8 @@ def init_db():
             pass
         c.execute("CREATE TABLE IF NOT EXISTS cfg(k TEXT PRIMARY KEY, v TEXT)")
         for k, v in (("mycall", "LY5AT/M"), ("mode", "SSB"), ("freq", "3600"),
-                     ("name", ""), ("category", "M"), ("round_override", "0")):
+                     ("name", ""), ("category", "M"), ("round_override", "0"),
+                     ("ly_default", "1")):
             if c.execute("SELECT 1 FROM cfg WHERE k=?", (k,)).fetchone() is None:
                 c.execute("INSERT INTO cfg(k,v) VALUES(?,?)", (k, v))
 
@@ -347,6 +348,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             s["name"] = cfg_get("name", "")
             s["category"] = cfg_get("category", "M")
             s["round_override"] = cfg_get("round_override", "0")
+            s["ly_default"] = cfg_get("ly_default", "1")
             s["valid_count"] = len(VALID_SQUARES)
             tnow = now_utc()
             s["utc"] = tnow.isoformat()
@@ -486,7 +488,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == "/api/cfgset":
             k = str(data.get("key"))
             v = (data.get("value") or "").strip()
-            if k in ("mycall", "name", "category", "round_override"):
+            if k in ("mycall", "name", "category", "round_override", "ly_default"):
                 cfg_set(k, v.upper() if k == "mycall" else v)
             return self._json({"ok": True})
 
