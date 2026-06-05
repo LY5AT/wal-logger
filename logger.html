@@ -98,6 +98,8 @@
   <span><label class="cap">kHz</label><input id="freq" value="3600"></span>
   <span class="clockbox"><label class="cap">UTC</label><span class="clock" id="clock">--:--:--</span></span>
   <div class="round"><div class="rbig" id="rbig">TURAS -</div><div class="rsub" id="rsub">-</div></div>
+  <span><label class="cap">Turas</label><select id="roundov" class="catsel" style="font-size:13px;padding:6px" title="Turo perrašymas">
+    <option value="0">auto</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></span>
   <span class="gps" id="gps">GPS: -</span>
   <span class="sent"><label class="cap">Sent WAL</label><input id="sent" maxlength="4" placeholder="--" autocomplete="off"></span>
 </header>
@@ -167,6 +169,7 @@ $("#mycall").onchange=e=>api("/api/mycall",{mycall:e.target.value});
 $("#sent").onchange=e=>api("/api/sent",{wal:e.target.value});
 $("#name").onchange=e=>api("/api/cfgset",{key:"name",value:e.target.value});
 $("#category").onchange=e=>api("/api/cfgset",{key:"category",value:e.target.value});
+$("#roundov").onchange=e=>api("/api/cfgset",{key:"round_override",value:e.target.value}).then(refresh);
 $("#backup").onclick=()=>api("/api/backup").then(r=>{$("#hint").innerHTML='<span class="ok">💾 Kopija išsaugota: '+(r.backup||"-")+'</span>';});
 $("#wipe").onclick=()=>{
   const n=$("#s-qso").textContent;
@@ -318,10 +321,13 @@ function paintMap(){document.querySelectorAll("#map rect").forEach(r=>r.classLis
 
 // ---- round badge + clock
 function paintRound(s){
-  const cr=s.current_round, ut=new Date(s.utc);
+  const cr=s.current_round, ut=new Date(s.utc), ov=parseInt(s.round_override||"0");
   const rb=$("#rbig"), rs=$("#rsub"), rc=s.stats.rounds||{};
   const counts="T1:"+(rc[1]||0)+" T2:"+(rc[2]||0)+" T3:"+(rc[3]||0);
-  if(cr>=1&&cr<=3){
+  if(ov>=1&&ov<=3){
+    rb.textContent="TURAS "+ov; rb.classList.add("live");
+    rs.textContent="rankinis · "+counts;
+  } else if(cr>=1&&cr<=3){
     const left=59-ut.getUTCMinutes();
     rb.textContent="TURAS "+cr; rb.classList.add("live");
     rs.textContent="liko "+left+" min · "+counts;
@@ -340,6 +346,7 @@ function refresh(){
     if(document.activeElement!==$("#freq"))$("#freq").value=s.freq||"3600";
     if(document.activeElement!==$("#name"))$("#name").value=s.name||"";
     if(s.category&&$("#category").value!==s.category)$("#category").value=s.category;
+    if(document.activeElement!==$("#roundov"))$("#roundov").value=s.round_override||"0";
     if(s.mode&&s.mode!==mode)applyMode(s.mode,false);
     let g="GPS: rankinis";
     if(s.sent_source==="gps"&&s.gps_ts){const age=Math.round((Date.now()-new Date(s.gps_ts))/1000);

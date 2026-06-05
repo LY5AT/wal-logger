@@ -120,7 +120,7 @@ def init_db():
             pass
         c.execute("CREATE TABLE IF NOT EXISTS cfg(k TEXT PRIMARY KEY, v TEXT)")
         for k, v in (("mycall", "LY5AT/M"), ("mode", "SSB"), ("freq", "3600"),
-                     ("name", ""), ("category", "M")):
+                     ("name", ""), ("category", "M"), ("round_override", "0")):
             if c.execute("SELECT 1 FROM cfg WHERE k=?", (k,)).fetchone() is None:
                 c.execute("INSERT INTO cfg(k,v) VALUES(?,?)", (k, v))
 
@@ -140,6 +140,15 @@ def cfg_set(k, v):
 # Contest runs in three 1-hour rounds (turai): 06,07,08 UTC -> 1,2,3.
 def round_for_hour(h):
     return {6: 1, 7: 2, 8: 3}.get(h, 0)
+
+
+def current_round():
+    """Effective round: manual override (1/2/3) if set, else from the UTC hour."""
+    try:
+        ov = int(cfg_get("round_override", "0"))
+    except ValueError:
+        ov = 0
+    return ov if ov in (1, 2, 3) else round_for_hour(now_utc().hour)
 
 
 def qso_points(call, rcv_wal):
@@ -337,10 +346,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             s["freq"] = cfg_get("freq", "3600")
             s["name"] = cfg_get("name", "")
             s["category"] = cfg_get("category", "M")
+            s["round_override"] = cfg_get("round_override", "0")
             s["valid_count"] = len(VALID_SQUARES)
             tnow = now_utc()
             s["utc"] = tnow.isoformat()
-            s["current_round"] = round_for_hour(tnow.hour)
+            s["current_round"] = current_round()
             return self._json(s)
         if path == "/api/valid":
             return self._json(sorted(VALID_SQUARES))
@@ -411,7 +421,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             rst_def = "599" if mode == "CW" else "59"
             pts = qso_points(call, rcv_wal)
             tnow = now_utc()
-            rnd = round_for_hour(tnow.hour)
+            rnd = current_round()
             with db() as c:
                 c.execute(
                     "INSERT INTO qso(ts_utc,freq_khz,mode,call,rst_s,rst_r,sent_wal,rcv_wal,points,rnd)"
@@ -438,8 +448,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 rst_r = data.get("rst_r") or row["rst_r"]
                 freq = int(data.get("freq_khz") or row["freq_khz"] or 3600)
                 pts = qso_points(call, rcv_wal)
-                ts = datetime.datetime.fromisoformat(row["ts_utc"])
-                rnd = round_for_hour(ts.hour)
+                rnd = row["rnd"]          # keep the round the QSO was made in
                 c.execute(
                     "UPDATE qso SET call=?,rcv_wal=?,sent_wal=?,mode=?,rst_s=?,rst_r=?,"
                     "freq_khz=?,points=?,rnd=? WHERE id=?",
@@ -477,14 +486,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == "/api/cfgset":
             k = str(data.get("key"))
             v = (data.get("value") or "").strip()
-            if k in ("mycall", "name", "category"):
+            if k in ("mycall", "name", "category", "round_override"):
                 cfg_set(k, v.upper() if k == "mycall" else v)
             return self._json({"ok": True})
 
         if path == "/api/dupe":
             call = (data.get("call") or "").strip().upper()
             mode = "CW" if (data.get("mode") or "SSB").upper() == "CW" else "SSB"
-            rnd = round_for_hour(now_utc().hour)
+            rnd = current_round()
             with db() as c:
                 rows = c.execute(
                     "SELECT rcv_wal FROM qso WHERE call=? AND mode=? AND rnd=?", (call, mode, rnd)
