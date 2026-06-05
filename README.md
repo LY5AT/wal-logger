@@ -3,6 +3,19 @@
 Mažas savarankiškas loggeris Lietuvos mobiliųjų-portabiliųjų RS čempionatui (WAL).
 Veikia offline ant Windows laptopo. Telefonas (Android) duoda GPS -> Sent WAL kvadratą.
 
+## Diegimas (Windows)
+
+Reikia tik Python 3. Trys žingsniai:
+
+1. **Python** (jei dar nėra): https://www.python.org/downloads/ - diegiant pažymėk **"Add Python to PATH"**
+   (arba `winget install Python.Python.3.12`). Patikra: `python --version`.
+2. **Parsisiųsk projektą** - vienas iš:
+   - `git clone https://github.com/LY5AT/wal-logger.git`  (ar `gh repo clone LY5AT/wal-logger`), arba
+   - GitHub puslapyje **Code -> Download ZIP** -> išarchyvuok.
+3. Aplanke dukart spustelėk **`install.bat`** (įdiegs `cryptography` ir `aprslib`).
+
+Tada paleisk **`Start WAL Logger.bat`**. (Jei 3 žingsnį praleidai - pirmą kartą jis priklausomybes įdiegs pats.)
+
 ## Paleidimas
 
 Dukart spustelėk **`Start WAL Logger.bat`** (arba `python wal_logger.py`).
@@ -94,6 +107,9 @@ gali suktis kartu.
 - Jungiasi read-only prie APRS-IS (LY5AT, passcode -1), filtras = Lietuvos plotas.
 - Parsina ir Mic-E (mobilūs), ir įprastus paketus -> lat/lon -> WAL kvadratas (ta pati formulė).
 - Žemėlapis: LY stotys žalios, kitos mėlynos, judantys /m mirksi; kvadratas su stotimi pašviesinamas.
-  Dešinėje - sąrašas (call / WAL / greitis / prieš kiek). Šalia stovinčio paveikslo žymeklio - kallsign.
+  Dešinėje - sąrašas (call / WAL / km/h / prieš kiek). Prie žymeklio - šaukinys ir greitis (`LY5AT-4 · 45`).
+- **„Tik judantys"** (įjungta pagal nutylėjimą) - rodo tik judančias stotis, slepia fiksuotas (digipeateriai,
+  orų st.). „Juda" = realiai pajudėjo (arba greitis > 0), tad sustojęs /m operuoti vis tiek lieka.
+- **Pėdsakas (breadcrumb)**: kiekvienos stoties paskutinių pozicijų linija - matosi kelias tarp kvadratų.
 - Stotys atsiranda po truputį (APRS beaconai kas kelias min); senesnės nei 35 min dingsta.
 - Reikalauja interneto. Priklausomybė: `aprslib` (pip).
