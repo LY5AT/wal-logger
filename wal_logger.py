@@ -82,6 +82,7 @@ STATE = {
     "gps_lat": None,
     "gps_lon": None,
     "gps_ts": None,        # iso time of last GPS fix
+    "gps_hold": None,      # GPS square at which a manual override was set; held until GPS moves off it
 }
 
 
@@ -399,13 +400,30 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with LOCK:
                 STATE["gps_lat"], STATE["gps_lon"] = lat, lon
                 STATE["gps_ts"] = now_utc().isoformat()
+                src = STATE.get("sent_source")
+                hold = STATE.get("gps_hold")
+                cur_sent = STATE.get("sent_wal")
             if sq:
-                set_sent(sq, "gps")
+                # If the operator manually set a square, respect it while parked
+                # (GPS square unchanged); auto-resume once GPS shows a different square.
+                if src == "manual" and cur_sent:
+                    if hold is None:
+                        with LOCK:
+                            STATE["gps_hold"] = sq
+                    elif sq != hold:
+                        set_sent(sq, "gps")
+                        with LOCK:
+                            STATE["gps_hold"] = None
+                    # else: same spot -> keep manual override
+                else:
+                    set_sent(sq, "gps")
             return self._json({"ok": True, "square": sq})
 
         if path == "/api/sent":
             wal = (data.get("wal") or "").strip().upper()
             set_sent(wal, "manual")
+            with LOCK:
+                STATE["gps_hold"] = latlon_to_wal(STATE.get("gps_lat"), STATE.get("gps_lon"))
             return self._json({"ok": True, "sent_wal": wal})
 
         if path == "/api/mycall":
@@ -496,9 +514,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             call = (data.get("call") or "").strip().upper()
             mode = "CW" if (data.get("mode") or "SSB").upper() == "CW" else "SSB"
             rnd = current_round()
+            with LOCK:
+                mysq = STATE.get("sent_wal", "")
+            # A QSO is a dupe only if worked this round, this mode, AND from MY current
+            # square. If a mobile changes its own square it becomes a new correspondent,
+            # so re-working the same station is then a valid (non-dupe) QSO.
             with db() as c:
                 rows = c.execute(
-                    "SELECT rcv_wal FROM qso WHERE call=? AND mode=? AND rnd=?", (call, mode, rnd)
+                    "SELECT rcv_wal FROM qso WHERE call=? AND mode=? AND rnd=? AND sent_wal=?",
+                    (call, mode, rnd, mysq)
                 ).fetchall()
                 anyr = c.execute(
                     "SELECT rcv_wal FROM qso WHERE call=? ORDER BY id DESC LIMIT 1", (call,)
@@ -508,6 +532,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "prev_rcv": rows[-1]["rcv_wal"] if rows else "",
                 "last_rcv": anyr["rcv_wal"] if anyr else "",
                 "round": rnd,
+                "my_square": mysq,
             })
 
         return self._send(404, "not found", "text/plain")

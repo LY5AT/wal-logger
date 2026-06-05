@@ -208,7 +208,7 @@ function showValid(){
 function checkDupe(){
   const call=$("#call").value.trim().toUpperCase(); if(call.length<3)return;
   api("/api/dupe",{call,mode}).then(d=>{ if(d.count>0)
-    $("#hint").innerHTML='<span class="dupe">⚠ '+call+' jau ture '+(d.round||"-")+' ('+mode+'), praeitas: '+d.prev_rcv+'</span>'; });
+    $("#hint").innerHTML='<span class="dupe">⚠ '+call+' jau darytas iš '+(d.my_square||"?")+' šiame ture ('+mode+'). Pakeitus savo kvadratą - galima vėl.</span>'; });
 }
 
 // ---- logging
@@ -360,6 +360,7 @@ function refresh(){
     if(s.sent_source==="gps"&&s.gps_ts){const age=Math.round((Date.now()-new Date(s.gps_ts))/1000);
       const col=age>30?"#ff5d5d":(age>12?"#ffb020":"#37d67a");
       g='GPS: <b>'+(s.sent_wal||"?")+'</b> · <span style="color:'+col+'">'+age+'s</span>'+(age>30?" ⚠":"");}
+    else if(s.sent_wal){g="GPS: rankinis 🔒";}
     $("#gps").innerHTML=g;
     const st=s.stats;
     totalQsos=st.qsos;
