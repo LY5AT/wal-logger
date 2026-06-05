@@ -147,7 +147,7 @@
 
 <script>
 const $ = s => document.querySelector(s);
-let mode="SSB", valid=[], worked=new Set(), qsos=[], totalQsos=0;
+let mode="SSB", valid=[], worked=new Set(), qsos=[], totalQsos=0, editingId=null;
 
 function api(p,b){return fetch(p,b?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}:undefined).then(r=>r.json());}
 
@@ -284,6 +284,7 @@ function bindRows(){
 }
 function startEdit(id){
   const r=qsos.find(q=>q.id===id); if(!r)return;
+  editingId=id;
   const tr=document.querySelector('tr[data-id="'+id+'"]'); tr.className="erow";
   tr.innerHTML='<td colspan="10">'+
     'Call <input class="e-call" value="'+r.call+'" style="width:90px">'+
@@ -295,8 +296,8 @@ function startEdit(id){
   tr.querySelector(".save").onclick=()=>api("/api/qso/update",{id,
     call:tr.querySelector(".e-call").value,mode:tr.querySelector(".e-mode").value,
     sent_wal:tr.querySelector(".e-sent").value,rcv_wal:tr.querySelector(".e-rcv").value,
-    rst_s:tr.querySelector(".e-rsts").value,rst_r:tr.querySelector(".e-rstr").value}).then(refresh);
-  tr.querySelector(".cancel").onclick=refresh;
+    rst_s:tr.querySelector(".e-rsts").value,rst_r:tr.querySelector(".e-rstr").value}).then(()=>{editingId=null;refresh();});
+  tr.querySelector(".cancel").onclick=()=>{editingId=null;refresh();};
   tr.querySelector(".e-call").focus();
 }
 
@@ -351,7 +352,7 @@ function refresh(){
     $("#s-sq").textContent=st.squares;$("#s-own").textContent=st.own_squares;$("#s-dx").textContent=st.dx_countries;
     worked=new Set(st.worked_squares); paintMap(); paintRound(s);
   });
-  api("/api/qsos").then(rows=>{qsos=rows; $("#log-body").innerHTML=rows.map(row).join(""); bindRows();});
+  api("/api/qsos").then(rows=>{ if(editingId!==null)return; qsos=rows; $("#log-body").innerHTML=rows.map(row).join(""); bindRows();});
 }
 
 // ---- init
