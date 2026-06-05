@@ -84,8 +84,14 @@ Header'yje užpildyk: **Mano** (šaukinys, pvz. `LY5AT/M`), **Vardas**, **Kat.**
 - **⬇ ADIF** -> bendram žurnalui.
 
 Visi ryšiai saugomi `wal_log.sqlite` (autosave kiekvieną QSO). SENT WAL irgi išsaugomas -
-jei programą perkrauni varžybų metu, kvadratas neprapuola. Patikrinta: net staigus išjungimas
-(power-loss) ryšių nepraranda.
+jei programą perkrauni varžybų metu, kvadratas neprapuola.
+
+**Apsauga nuo praradimo (3 sluoksniai):**
+1. Kiekvienas QSO iškart įrašomas į `wal_log.sqlite` (SQLite, fsync). Serverio/laptopo mirtis ryšių nepraranda - patikrinta hard-kill testu.
+2. Kiekvienas QSO dar pridedamas į `qso_journal.csv` - append-only juosta (fsync). Net jei SQLite failas dingtų/sugestų, visi ryšiai lieka šitam faile.
+3. Automatinė pilna kopija į `backups/` kas 5 min (+ prieš kiekvieną „Naujas" valymą).
+
+Atstatymas: tiesiog paleisk iš naujo (`Start WAL Logger.bat`) - viskas grįžta iš `wal_log.sqlite`.
 
 ## Naujas žurnalas / kopijos (testavimui)
 

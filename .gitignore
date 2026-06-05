@@ -3,6 +3,7 @@ wal_log.sqlite
 wal_log.sqlite-journal
 wal_log.sqlite-wal
 wal_log.sqlite-shm
+qso_journal.csv
 backups/
 macro_*.*
 

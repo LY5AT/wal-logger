@@ -21,11 +21,13 @@ import os
 import math
 import re
 import shutil
+import time
 import datetime
 import webbrowser
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(HERE, "wal_log.sqlite")
+JOURNAL_PATH = os.path.join(HERE, "qso_journal.csv")
 SEC_LOCAL = os.path.join(HERE, "LYWAL.sec")
 SEC_N1MM = r"C:\Users\linut\Documents\N1MM Logger+\SupportFiles\LYWAL.sec"
 CERT_PATH = os.path.join(HERE, "cert.pem")
@@ -284,6 +286,32 @@ def backup_db():
         return ""
 
 
+def append_journal(fields):
+    """Append one QSO to an append-only, fsync'd CSV tape - disaster recovery copy.
+    Append-only means a crash can at worst leave the last line partial; all prior
+    QSOs stay intact even if the SQLite file is lost or corrupted."""
+    try:
+        new = (not os.path.exists(JOURNAL_PATH)) or os.path.getsize(JOURNAL_PATH) == 0
+        with open(JOURNAL_PATH, "a", encoding="utf-8", newline="") as f:
+            if new:
+                f.write("ts_utc,freq_khz,mode,call,rst_s,rst_r,sent_wal,rcv_wal,points,rnd\n")
+            f.write(",".join('"%s"' % str(x).replace('"', '""') for x in fields) + "\n")
+            f.flush()
+            os.fsync(f.fileno())
+    except OSError:
+        pass
+
+
+def backup_loop():
+    """Snapshot the DB to backups/ every 5 min (guards against file corruption/deletion)."""
+    while True:
+        time.sleep(300)
+        try:
+            backup_db()
+        except Exception:
+            pass
+
+
 # ---------------------------------------------------------------- HTTP handler
 class Handler(http.server.BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
@@ -442,14 +470,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             pts = qso_points(call, rcv_wal)
             tnow = now_utc()
             rnd = current_round()
+            freq = int(data.get("freq_khz") or 3600)
+            rst_s = data.get("rst_s") or rst_def
+            rst_r = data.get("rst_r") or rst_def
             with db() as c:
                 c.execute(
                     "INSERT INTO qso(ts_utc,freq_khz,mode,call,rst_s,rst_r,sent_wal,rcv_wal,points,rnd)"
                     " VALUES(?,?,?,?,?,?,?,?,?,?)",
-                    (tnow.isoformat(), int(data.get("freq_khz") or 3600), mode, call,
-                     data.get("rst_s") or rst_def, data.get("rst_r") or rst_def,
-                     sent, rcv_wal, pts, rnd),
+                    (tnow.isoformat(), freq, mode, call, rst_s, rst_r, sent, rcv_wal, pts, rnd),
                 )
+            # redundant append-only tape (fsync) - survives even SQLite file loss
+            append_journal([tnow.isoformat(), freq, mode, call, rst_s, rst_r, sent, rcv_wal, pts, rnd])
             valid = (rcv_wal == "DX") or (rcv_wal in VALID_SQUARES)
             return self._json({"ok": True, "points": pts, "valid_square": valid, "round": rnd})
 
@@ -501,6 +532,15 @@ class Handler(http.server.BaseHTTPRequestHandler):
             backup = backup_db()
             with db() as c:
                 c.execute("DELETE FROM qso")
+            # rotate the append-only tape so a fresh contest starts clean (old tape kept)
+            if os.path.exists(JOURNAL_PATH):
+                bdir = os.path.join(HERE, "backups")
+                os.makedirs(bdir, exist_ok=True)
+                try:
+                    shutil.move(JOURNAL_PATH,
+                                os.path.join(bdir, "qso_journal_%s.csv" % now_utc().strftime("%Y%m%d_%H%M%S")))
+                except OSError:
+                    pass
             return self._json({"ok": True, "cleared": n, "backup": backup})
 
         if path == "/api/cfgset":
@@ -615,6 +655,7 @@ def main():
         STATE["sent_source"] = cfg_get("sent_source", "manual")
     ip = lan_ip()
     threading.Thread(target=serve_https, args=(ip,), daemon=True).start()
+    threading.Thread(target=backup_loop, daemon=True).start()
     httpd = ThreadingHTTP(("0.0.0.0", HTTP_PORT), Handler)
     print("=" * 60)
     print(" WAL Contest Logger")
