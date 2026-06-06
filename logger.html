@@ -29,6 +29,7 @@
   .rsub{font-size:11px;color:var(--mut)}
   .gps{font-size:12px;color:var(--mut);min-width:150px;text-align:right}
   .gps b{color:var(--blue)}
+  .gpsauto{background:#0c1220;border:1px solid var(--blue);color:var(--blue);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
   .sent{display:flex;flex-direction:column;align-items:center}
   .sent input{font-size:32px;font-weight:800;letter-spacing:2px;width:132px;text-align:center;
          background:#0c1220;border:2px solid var(--accent);color:var(--accent);border-radius:10px;padding:1px 6px}
@@ -41,6 +42,7 @@
   .fld{display:flex;flex-direction:column;gap:4px}
   .fld input{background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px;font-size:20px}
   #call{width:170px;text-transform:uppercase;font-weight:700}
+  #call.dup{border-color:var(--bad);background:#2a1414}
   #rcv{width:120px;text-transform:uppercase;font-weight:700}
   .rst{width:62px;text-align:center}
   .logbtn{background:var(--accent);color:#04130a;border:0;border-radius:8px;padding:12px 26px;
@@ -102,6 +104,7 @@
   <span><label class="cap">Turas</label><select id="roundov" class="catsel" style="font-size:13px;padding:6px" title="Turo perrašymas">
     <option value="0">auto</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></span>
   <span class="gps" id="gps">GPS: -</span>
+  <button id="gpsauto" class="gpsauto" style="display:none">↻ GPS auto</button>
   <span class="sent"><label class="cap">Sent WAL</label><input id="sent" maxlength="4" placeholder="--" autocomplete="off"></span>
 </header>
 
@@ -173,6 +176,7 @@ $("#mCW").onclick=()=>applyMode("CW",true);
 $("#freq").onchange=saveBand;
 $("#mycall").onchange=e=>api("/api/mycall",{mycall:e.target.value});
 $("#sent").onchange=e=>api("/api/sent",{wal:e.target.value});
+$("#gpsauto").onclick=()=>api("/api/gps_auto").then(refresh);
 $("#name").onchange=e=>api("/api/cfgset",{key:"name",value:e.target.value});
 $("#category").onchange=e=>api("/api/cfgset",{key:"category",value:e.target.value});
 $("#roundov").onchange=e=>api("/api/cfgset",{key:"round_override",value:e.target.value}).then(refresh);
@@ -184,32 +188,47 @@ $("#wipe").onclick=()=>{
   api("/api/wipe").then(r=>{$("#hint").innerHTML='<span class="ok">Išvalyta ('+r.cleared+' QSO). Kopija: '+(r.backup||"-")+'</span>';refresh();$("#call").focus();});
 };
 
-// ---- hints
-let ht;
-$("#call").addEventListener("input",()=>{clearTimeout(ht);ht=setTimeout(checkDupe,180);});
-$("#rcv").addEventListener("input",showValid);
-// Tab from Call -> jump straight to Rcv WAL, prefilling the square if we worked this call before
-$("#call").addEventListener("keydown",e=>{
-  if(e.key==="Tab"&&!e.shiftKey){
-    e.preventDefault();
-    const call=$("#call").value.trim().toUpperCase();
-    $("#rcv").focus();
-    if(call.length>=3) api("/api/dupe",{call,mode}).then(d=>{
-      if(d.last_rcv&&!$("#rcv").value){$("#rcv").value=d.last_rcv;$("#rcv").select();showValid();}
-    });
-  }
-});
+// ---- hints: dupe + WAL validity share one line; the dupe stays visible at the WAL field
+let ht, dupeText="", validText="";
+function renderHint(){
+  let h="";
+  if(dupeText) h+='<span class="dupe">'+dupeText+'</span>';
+  if(validText) h+=(h?' &nbsp;·&nbsp; ':'')+validText;
+  $("#hint").innerHTML=h;
+}
+function applyDupe(d,call){
+  const dup=!!(d&&d.count>0);
+  dupeText = dup ? ('⚠ '+call+' DUPE - jau iš '+(d.my_square||"?")+' šiame ture ('+mode+'); pakeitus savo kvadratą - galima vėl') : "";
+  $("#call").classList.toggle("dup",dup);
+}
 function showValid(){
-  const v=$("#rcv").value.trim().toUpperCase(),h=$("#hint");
-  if(!v)return;
-  if(v==="DX"){h.innerHTML='<span class="ok">DX - užsienio stotis (1 tšk)</span>';return;}
-  h.innerHTML=valid.includes(v)?'<span class="ok">'+v+' galioja</span>':'<span class="bad">'+v+' nėra WAL sąraše</span>';
+  const v=$("#rcv").value.trim().toUpperCase();
+  if(!v) validText="";
+  else if(v==="DX") validText='<span class="ok">DX - užsienio (1 tšk)</span>';
+  else validText = valid.includes(v) ? '<span class="ok">'+v+' galioja</span>' : '<span class="bad">'+v+' nėra WAL sąraše</span>';
+  renderHint();
 }
 function checkDupe(){
-  const call=$("#call").value.trim().toUpperCase(); if(call.length<3)return;
-  api("/api/dupe",{call,mode}).then(d=>{ if(d.count>0)
-    $("#hint").innerHTML='<span class="dupe">⚠ '+call+' jau darytas iš '+(d.my_square||"?")+' šiame ture ('+mode+'). Pakeitus savo kvadratą - galima vėl.</span>'; });
+  const call=$("#call").value.trim().toUpperCase();
+  if(call.length<3){applyDupe(null,call);renderHint();return;}
+  api("/api/dupe",{call,mode}).then(d=>{applyDupe(d,call);renderHint();});
 }
+$("#call").addEventListener("input",()=>{clearTimeout(ht);ht=setTimeout(checkDupe,180);});
+$("#rcv").addEventListener("input",showValid);
+// Tab cycles ONLY between Call and Rcv WAL (RST fields / buttons are skipped)
+$("#call").addEventListener("keydown",e=>{
+  if(e.key!=="Tab")return;
+  e.preventDefault();
+  const call=$("#call").value.trim().toUpperCase();
+  $("#rcv").focus();
+  if(call.length>=3) api("/api/dupe",{call,mode}).then(d=>{
+    applyDupe(d,call);
+    if(d.last_rcv&&!$("#rcv").value){$("#rcv").value=d.last_rcv;$("#rcv").select();}
+    showValid();
+  });
+  else { applyDupe(null,call); renderHint(); }
+});
+$("#rcv").addEventListener("keydown",e=>{ if(e.key==="Tab"){e.preventDefault();$("#call").focus();} });
 
 // ---- logging
 function logQso(){
@@ -218,11 +237,11 @@ function logQso(){
   api("/api/qso",{call,rcv_wal:rcv,mode,rst_s:$("#rsts").value,rst_r:$("#rstr").value,
     sent_wal:$("#sent").value,freq_khz:parseInt($("#freq").value)||3600}).then(r=>{
     if(!r.ok){$("#hint").innerHTML='<span class="bad">'+(r.error||"klaida")+'</span>';return;}
-    $("#rcv").value="";$("#hint").textContent="+"+r.points+" tšk";resetCall();refresh();
+    $("#rcv").value="";dupeText="";validText="";$("#call").classList.remove("dup");$("#hint").textContent="+"+r.points+" tšk";resetCall();refresh();
   });
 }
 $("#log").onclick=logQso;
-function wipeEntry(){stopMacro();$("#rcv").value="";$("#hint").textContent="";resetCall();}
+function wipeEntry(){stopMacro();$("#rcv").value="";dupeText="";validText="";$("#call").classList.remove("dup");$("#hint").textContent="";resetCall();}
 document.addEventListener("keydown",e=>{
   if(e.key==="Enter"&&["call","rcv","rstr"].includes(e.target.id))logQso();
   if(e.key==="Escape")wipeEntry();
@@ -362,6 +381,7 @@ function refresh(){
       g='GPS: <b>'+(s.sent_wal||"?")+'</b> · <span style="color:'+col+'">'+age+'s</span>'+(age>30?" ⚠":"");}
     else if(s.sent_wal){g="GPS: rankinis 🔒";}
     $("#gps").innerHTML=g;
+    $("#gpsauto").style.display=(s.sent_source==="manual")?"":"none";
     const st=s.stats;
     totalQsos=st.qsos;
     $("#s-qso").textContent=st.qsos;$("#s-pts").textContent=st.points;$("#s-score").textContent=st.score;

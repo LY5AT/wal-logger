@@ -454,6 +454,20 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 STATE["gps_hold"] = latlon_to_wal(STATE.get("gps_lat"), STATE.get("gps_lon"))
             return self._json({"ok": True, "sent_wal": wal})
 
+        if path == "/api/gps_auto":
+            # switch back from manual override to live GPS auto
+            with LOCK:
+                lat, lon = STATE.get("gps_lat"), STATE.get("gps_lon")
+                STATE["gps_hold"] = None
+            sq = latlon_to_wal(lat, lon)
+            if sq:
+                set_sent(sq, "gps")
+            else:
+                with LOCK:
+                    STATE["sent_source"] = "gps"
+                cfg_set("sent_source", "gps")
+            return self._json({"ok": True, "square": sq})
+
         if path == "/api/mycall":
             cfg_set("mycall", (data.get("mycall") or "").strip().upper())
             return self._json({"ok": True})
