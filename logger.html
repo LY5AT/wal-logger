@@ -215,10 +215,8 @@ function checkDupe(){
 }
 $("#call").addEventListener("input",()=>{clearTimeout(ht);ht=setTimeout(checkDupe,180);});
 $("#rcv").addEventListener("input",showValid);
-// Tab cycles ONLY between Call and Rcv WAL (RST fields / buttons are skipped)
-$("#call").addEventListener("keydown",e=>{
-  if(e.key!=="Tab")return;
-  e.preventDefault();
+// Tab cycles ONLY between Call and Rcv WAL - Tab itself is trapped in the capture-phase handler below
+function tabToRcv(){
   const call=$("#call").value.trim().toUpperCase();
   $("#rcv").focus();
   if(call.length>=3) api("/api/dupe",{call,mode}).then(d=>{
@@ -227,8 +225,7 @@ $("#call").addEventListener("keydown",e=>{
     showValid();
   });
   else { applyDupe(null,call); renderHint(); }
-});
-$("#rcv").addEventListener("keydown",e=>{ if(e.key==="Tab"){e.preventDefault();$("#call").focus();} });
+}
 
 // ---- logging
 function logQso(){
@@ -243,6 +240,12 @@ function logQso(){
 $("#log").onclick=logQso;
 function wipeEntry(){stopMacro();$("#rcv").value="";dupeText="";validText="";$("#call").classList.remove("dup");$("#hint").textContent="";resetCall();}
 document.addEventListener("keydown",e=>{
+  // Trap Tab so it only bounces between Call and Rcv WAL (capture phase = reliably prevents native tabbing)
+  if(e.key==="Tab"&&(e.target.id==="call"||e.target.id==="rcv")){
+    e.preventDefault();
+    if(e.target.id==="call") tabToRcv(); else $("#call").focus();
+    return;
+  }
   if(e.key==="Enter"&&["call","rcv","rstr"].includes(e.target.id))logQso();
   if(e.key==="Escape")wipeEntry();
   // Ctrl+W = wipe entry (N1MM muscle memory) instead of closing the tab
