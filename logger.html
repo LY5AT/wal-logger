@@ -29,7 +29,8 @@
   .rsub{font-size:11px;color:var(--mut)}
   .gps{font-size:12px;color:var(--mut);min-width:150px;text-align:right}
   .gps b{color:var(--blue)}
-  .gpsauto{background:#0c1220;border:1px solid var(--blue);color:var(--blue);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .gpsauto{background:#0c1220;border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .gpsauto.man{border-color:var(--warn);color:var(--warn);font-weight:700}
   .sent{display:flex;flex-direction:column;align-items:center}
   .sent input{font-size:32px;font-weight:800;letter-spacing:2px;width:132px;text-align:center;
          background:#0c1220;border:2px solid var(--accent);color:var(--accent);border-radius:10px;padding:1px 6px}
@@ -104,7 +105,7 @@
   <span><label class="cap">Turas</label><select id="roundov" class="catsel" style="font-size:13px;padding:6px" title="Turo perrašymas">
     <option value="0">auto</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></span>
   <span class="gps" id="gps">GPS: -</span>
-  <button id="gpsauto" class="gpsauto" style="display:none">↻ GPS auto</button>
+  <button id="gpsauto" class="gpsauto">GPS auto</button>
   <span class="sent"><label class="cap">Sent WAL</label><input id="sent" maxlength="4" placeholder="--" autocomplete="off"></span>
 </header>
 
@@ -384,7 +385,10 @@ function refresh(){
       g='GPS: <b>'+(s.sent_wal||"?")+'</b> · <span style="color:'+col+'">'+age+'s</span>'+(age>30?" ⚠":"");}
     else if(s.sent_wal){g="GPS: rankinis 🔒";}
     $("#gps").innerHTML=g;
-    $("#gpsauto").style.display=(s.sent_source==="manual")?"":"none";
+    const man=(s.sent_source==="manual");
+    $("#gpsauto").textContent=man?"↻ GPS auto":"✓ GPS auto";
+    $("#gpsauto").title=man?"Spausk - grįžti į GPS auto":"GPS auto aktyvus";
+    $("#gpsauto").classList.toggle("man",man);
     const st=s.stats;
     totalQsos=st.qsos;
     $("#s-qso").textContent=st.qsos;$("#s-pts").textContent=st.points;$("#s-score").textContent=st.score;
