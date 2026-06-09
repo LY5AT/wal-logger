@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WAL Contest Logger - gyvas demo</title>
+<style>
+  :root{--bg:#0f141b;--panel:#172230;--line:#26344a;--ink:#e7eef7;--mut:#8aa0bd;
+        --accent:#37d67a;--warn:#ffb020;--bad:#ff5d5d;--blue:#4aa8ff}
+  *{box-sizing:border-box}
+  body{margin:0;font:15px/1.4 system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{display:flex;gap:16px;align-items:center;padding:10px 16px;background:var(--panel);
+         border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .brand{font-weight:800;letter-spacing:.5px}
+  label.cap{color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:1px;display:block}
+  .mycall input{background:#0c1220;border:1px solid var(--line);color:var(--ink);
+         border-radius:6px;padding:6px 8px;width:110px;font-weight:700}
+  .modes{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .modes button{background:#0c1220;color:var(--mut);border:0;padding:8px 14px;font-weight:700;cursor:pointer}
+  .modes button.on{background:var(--blue);color:#04101e}
+  #freq{background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px;width:76px}
+  .catsel{background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:8px;font-weight:700}
+  .clockbox{margin-left:auto;text-align:center}
+  .clock{font-variant-numeric:tabular-nums;font-weight:800;font-size:19px;color:var(--ink);display:block;letter-spacing:1px}
+  .round{text-align:center;background:#0c1220;border:1px solid var(--line);
+         border-radius:10px;padding:4px 14px;min-width:150px}
+  .rbig{font-size:20px;font-weight:800;color:var(--blue)}
+  .rbig.live{color:var(--accent)}
+  .rsub{font-size:11px;color:var(--mut)}
+  .gps{font-size:12px;color:var(--mut);min-width:150px;text-align:right}
+  .gps b{color:var(--blue)}
+  .gpsauto{background:#0c1220;border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer}
+  .gpsauto.man{border-color:var(--warn);color:var(--warn);font-weight:700}
+  .sent{display:flex;flex-direction:column;align-items:center}
+  .sent input{font-size:32px;font-weight:800;letter-spacing:2px;width:132px;text-align:center;
+         background:#0c1220;border:2px solid var(--accent);color:var(--accent);border-radius:10px;padding:1px 6px}
+  .sent input.empty{border-color:var(--warn);color:var(--warn)}
+  main{display:grid;grid-template-columns:1.35fr .65fr;gap:14px;padding:14px}
+  @media(max-width:920px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+  h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:1px;color:var(--mut)}
+  .entry{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+  .fld{display:flex;flex-direction:column;gap:4px}
+  .fld input{background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:9px;font-size:20px}
+  #call{width:170px;text-transform:uppercase;font-weight:700}
+  #call.dup{border-color:var(--bad);background:#2a1414}
+  #rcv{width:120px;text-transform:uppercase;font-weight:700}
+  .rst{width:62px;text-align:center}
+  .logbtn{background:var(--accent);color:#04130a;border:0;border-radius:8px;padding:12px 26px;
+         font-size:18px;font-weight:800;cursor:pointer}
+  .keyer{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 14px 0;
+         padding:10px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+  .slot{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:8px;padding:4px}
+  .kplay{background:#1d2b40;color:var(--ink);border:0;border-radius:6px;padding:9px 12px;font-weight:700;cursor:pointer;min-width:78px}
+  .kplay.has{background:var(--blue);color:#04101e}
+  .kplay.playing{background:var(--accent);color:#04130a}
+  .klabel{width:54px;background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:5px;font-size:12px}
+  .kmini{background:transparent;border:1px solid var(--line);color:var(--mut);border-radius:6px;padding:6px 7px;cursor:pointer;font-size:12px}
+  .kmini.recording{background:var(--bad);color:#fff;border-color:var(--bad)}
+  .kstop{margin-left:auto;background:#33455e;color:var(--ink);border:0;border-radius:8px;padding:9px 12px;cursor:pointer}
+  .hint{min-height:20px;margin-top:8px;font-size:13px}
+  .hint .dupe{color:var(--warn);font-weight:700}.hint .ok{color:var(--accent)}.hint .bad{color:var(--bad)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--line);white-space:nowrap}
+  th{color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase}
+  td.sq{color:var(--accent);font-weight:700}
+  td.act{cursor:pointer;color:var(--mut);text-align:center}
+  td.act:hover{color:var(--ink)}
+  .erow input,.erow select{background:#0c1220;border:1px solid var(--blue);color:var(--ink);
+         border-radius:5px;padding:4px;margin:1px;font-size:12px}
+  .ebtn{background:var(--accent);color:#04130a;border:0;border-radius:5px;padding:4px 9px;font-weight:700;cursor:pointer}
+  .ebtn.c{background:#33455e;color:var(--ink)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+  .stat{background:#0c1220;border:1px solid var(--line);border-radius:8px;padding:8px;text-align:center}
+  .stat b{display:block;font-size:23px}.stat span{font-size:11px;color:var(--mut);text-transform:uppercase}
+  .score b{color:var(--accent)}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 2px}
+  .tools a,.tools button{background:#0c1220;border:1px solid var(--line);color:var(--ink);border-radius:8px;
+         padding:8px 12px;text-decoration:none;font-size:13px;cursor:pointer}
+  .tools button.wipe{border-color:transparent;background:transparent;color:#3c4d66;margin-left:auto;
+         font-size:11px;padding:6px 8px;opacity:.6}
+  .tools button.wipe:hover{border-color:var(--bad);color:var(--bad);opacity:1}
+  #map{display:flex;justify-content:center;margin-top:6px}
+  #map svg{max-height:300px}
+  #map rect{fill:#1c2a40;stroke:#0f141b;stroke-width:.3}
+  #map rect.w{fill:var(--accent)}
+  #map text.axn{fill:#5b6f8c;font-size:6.5px;text-anchor:middle}
+  #map text.axl{fill:#7c92b2;font-size:8px;text-anchor:end;dominant-baseline:central;font-weight:700}
+  .maplbl{font-size:11px;color:var(--mut);text-align:center;margin-top:4px}
+</style>
+</head>
+<body>
+<div id="demoBar" style="background:#13233a;border-bottom:1px solid #26344a;color:#cfe0f5;
+  font:13px/1.4 system-ui,Segoe UI,Roboto,sans-serif;padding:8px 14px;display:flex;gap:10px;
+  align-items:center;flex-wrap:wrap">
+  <span style="background:#37d67a;color:#04130a;font-weight:800;border-radius:6px;padding:2px 8px;letter-spacing:.5px">DEMO</span>
+  <span>Užkrautas tikras <b>LY5AT/M</b> WAL 2026 logas (110 QSO). Loginki ryšius, tikrink dublius (nustatyk
+  <b>Turą</b> 1-3 ir įvesk jau darytą stotį), eksportuok Cabrillo/ADIF - viskas veikia naršyklėje, nieko diegti nereikia.</span>
+  <button id="demoReset" style="margin-left:auto;background:#0c1220;border:1px solid #26344a;color:#cfe0f5;
+    border-radius:8px;padding:6px 12px;cursor:pointer">↻ Iš naujo</button>
+  <a href="https://github.com/LY5AT/wal-logger" style="color:#4aa8ff;text-decoration:none;font-weight:700">GitHub ⌁</a>
+</div>
+
+<header>
+  <span class="brand">WAL LOGGER</span>
+  <span class="mycall"><label class="cap">Mano</label><input id="mycall"></span>
+  <span class="mycall"><label class="cap">Vardas</label><input id="name" style="width:96px;font-weight:400"></span>
+  <span><label class="cap">Kat.</label><select id="category" class="catsel">
+    <option>M</option><option>P</option><option>S</option><option>K</option><option>SWL</option><option>KL</option></select></span>
+  <span style="text-align:center"><label class="cap">LY pref.</label><input type="checkbox" id="lydef" style="width:18px;height:18px;margin-top:6px;cursor:pointer"></span>
+  <span><label class="cap">Modas</label>
+    <span class="modes"><button id="mSSB" class="on">SSB</button><button id="mCW">CW</button></span></span>
+  <span><label class="cap">kHz</label><input id="freq" value="3600"></span>
+  <span class="clockbox"><label class="cap">UTC</label><span class="clock" id="clock">--:--:--</span></span>
+  <div class="round"><div class="rbig" id="rbig">TURAS -</div><div class="rsub" id="rsub">-</div></div>
+  <span><label class="cap">Turas</label><select id="roundov" class="catsel" style="font-size:13px;padding:6px" title="Turo perrašymas">
+    <option value="0">auto</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></span>
+  <span class="gps" id="gps">GPS: -</span>
+  <button id="gpsauto" class="gpsauto">GPS auto</button>
+  <span class="sent"><label class="cap">Sent WAL</label><input id="sent" maxlength="4" placeholder="--" autocomplete="off"></span>
+</header>
+
+<div class="keyer" id="keyer">
+  <span class="cap" style="align-self:center">Papūga</span>
+  <div class="slot" data-n="1"></div>
+  <div class="slot" data-n="2"></div>
+  <div class="slot" data-n="3"></div>
+  <button class="kstop" id="kstop">⏹ Stop (Esc)</button>
+</div>
+
+<main>
+  <section class="card">
+    <h2>Ryšys</h2>
+    <div class="entry">
+      <div class="fld"><label class="cap">Call</label><input id="call" autocomplete="off"></div>
+      <div class="fld"><label class="cap">RST snt</label><input id="rsts" class="rst" value="59"></div>
+      <div class="fld"><label class="cap">RST rcv</label><input id="rstr" class="rst" value="59"></div>
+      <div class="fld"><label class="cap">Rcv WAL</label><input id="rcv" autocomplete="off" placeholder="A18 / DX"></div>
+      <button class="logbtn" id="log">Log It ⏎</button>
+    </div>
+    <div class="hint" id="hint"></div>
+
+    <h2 style="margin-top:18px">Žurnalas</h2>
+    <table><thead><tr>
+      <th>UTC</th><th>Turas</th><th>Call</th><th>Md</th><th>Snt</th><th>RST</th><th>Rcv</th><th>P</th><th></th><th></th>
+    </tr></thead><tbody id="log-body"></tbody></table>
+  </section>
+
+  <section class="card">
+    <h2>Rezultatas (apytikslis)</h2>
+    <div class="stats">
+      <div class="stat"><b id="s-qso">0</b><span>QSO</span></div>
+      <div class="stat"><b id="s-pts">0</b><span>Taškai</span></div>
+      <div class="stat score"><b id="s-score">0</b><span>Score</span></div>
+      <div class="stat"><b id="s-sq">0</b><span>Skverai</span></div>
+      <div class="stat"><b id="s-own">0</b><span>Savi sk.</span></div>
+      <div class="stat"><b id="s-dx">0</b><span>DX šalys</span></div>
+    </div>
+    <div class="tools"><button id="exCab">⬇ Cabrillo</button><button id="exAdif">⬇ ADIF</button><button id="backup">💾 Kopija</button><button id="wipe" class="wipe">🗑 Naujas</button></div>
+    <h2 style="margin-top:16px">Lietuva - WAL skverai</h2>
+    <div id="map"></div>
+    <div class="maplbl" id="maplbl">žali = padaryti</div>
+  </section>
+</main>
+
+<script>
+/* ===== WAL Logger - static browser backend (no server). Auto-generated by build_demo.py ===== */
+(function(){
+  var VALID = ["A05", "A06", "A07", "A08", "A09", "A10", "A11", "A12", "A13", "A14", "A15", "A16", "A17", "A18", "A22", "A23", "A24", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B09", "B10", "B11", "B12", "B13", "B14", "B15", "B16", "B17", "B18", "B19", "B20", "B21", "B22", "B23", "B24", "B25", "B26", "C01", "C02", "C03", "C04", "C05", "C06", "C07", "C08", "C09", "C10", "C11", "C12", "C13", "C14", "C15", "C16", "C17", "C18", "C19", "C20", "C21", "C22", "C23", "C24", "C25", "C26", "C27", "C28", "C29", "C30", "D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10", "D11", "D12", "D13", "D14", "D15", "D16", "D17", "D18", "D19", "D20", "D21", "D22", "D23", "D24", "D25", "D26", "D27", "D28", "D29", "D30", "D31", "D32", "DX", "E01", "E02", "E03", "E04", "E05", "E06", "E07", "E08", "E09", "E10", "E11", "E12", "E13", "E14", "E15", "E16", "E17", "E18", "E19", "E20", "E21", "E22", "E23", "E24", "E25", "E26", "E27", "E28", "E29", "E30", "E31", "E32", "E33", "E34", "F01", "F02", "F03", "F04", "F05", "F06", "F07", "F08", "F09", "F10", "F11", "F12", "F13", "F14", "F15", "F16", "F17", "F18", "F19", "F20", "F21", "F22", "F23", "F24", "F25", "F26", "F27", "F28", "F29", "F30", "F31", "F32", "F33", "F34", "G00", "G01", "G02", "G03", "G04", "G05", "G06", "G07", "G08", "G09", "G10", "G11", "G12", "G13", "G14", "G15", "G16", "G17", "G18", "G19", "G20", "G21", "G22", "G23", "G24", "G25", "G26", "G27", "G28", "G29", "G30", "G31", "G32", "G33", "G34", "G35", "H00", "H01", "H02", "H03", "H04", "H05", "H06", "H07", "H08", "H09", "H10", "H11", "H12", "H13", "H14", "H15", "H16", "H17", "H18", "H19", "H20", "H21", "H22", "H23", "H24", "H25", "H26", "H27", "H28", "H29", "H30", "H31", "H32", "H33", "H34", "H35", "H36", "I05", "I06", "I07", "I08", "I09", "I10", "I11", "I12", "I13", "I14", "I15", "I16", "I17", "I18", "I19", "I20", "I21", "I22", "I23", "I24", "I25", "I26", "I27", "I28", "I29", "I30", "I31", "I32", "I33", "I34", "I35", "J10", "J11", "J12", "J13", "J14", "J15", "J16", "J17", "J18", "J19", "J20", "J21", "J22", "J23", "J24", "J25", "J26", "J27", "J28", "J29", "J30", "J31", "J32", "K11", "K12", "K13", "K14", "K15", "K16", "K17", "K18", "K19", "K20", "K21", "K22", "K23", "K24", "K25", "K26", "K27", "K28", "K29", "L11", "L12", "L13", "L14", "L15", "L16", "L17", "L18", "L19", "L20", "L21", "L22", "L23", "L24", "L25", "L26", "L27", "L28", "L29", "M11", "M12", "M13", "M14", "M15", "M16", "M17", "M18", "M19", "M20", "M21", "M22", "M23", "M24", "M25", "M26", "M27", "M28", "N13", "N14", "N15", "N16", "N17", "N18", "N19", "N20", "N21", "N22", "N23", "N24", "N25", "N26", "N27", "N28", "N29", "O15", "O16", "O17", "O18", "O19", "O20", "O21", "O22", "O23", "O24", "O25", "O28", "O29", "P15", "P16", "P17", "P18", "P19", "P20", "P21", "P22", "P23"];
+  var SEED  = [{"id":0,"ts_utc":"2026-06-06T06:00:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"J24","points":1,"rnd":1},{"id":1,"ts_utc":"2026-06-06T06:01:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2HS","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"F29","points":1,"rnd":1},{"id":2,"ts_utc":"2026-06-06T06:01:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1DK","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"C21","points":1,"rnd":1},{"id":3,"ts_utc":"2026-06-06T06:06:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6C","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"L15","points":1,"rnd":1},{"id":4,"ts_utc":"2026-06-06T06:07:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2FN","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"I12","points":1,"rnd":1},{"id":5,"ts_utc":"2026-06-06T06:13:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1LI/M","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"L25","points":5,"rnd":1},{"id":6,"ts_utc":"2026-06-06T06:14:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY7M","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"G26","points":1,"rnd":1},{"id":7,"ts_utc":"2026-06-06T06:19:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"J24","points":1,"rnd":1},{"id":8,"ts_utc":"2026-06-06T06:20:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY7M","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"G26","points":1,"rnd":1},{"id":9,"ts_utc":"2026-06-06T06:26:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2GX/P","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"G02","points":3,"rnd":1},{"id":10,"ts_utc":"2026-06-06T06:28:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY4LA","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"E01","points":1,"rnd":1},{"id":11,"ts_utc":"2026-06-06T06:31:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1LI/M","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"L24","points":5,"rnd":1},{"id":12,"ts_utc":"2026-06-06T06:32:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6N/M","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"L22","points":5,"rnd":1},{"id":13,"ts_utc":"2026-06-06T06:33:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3QH","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"DX","points":1,"rnd":1},{"id":14,"ts_utc":"2026-06-06T06:37:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY4LA","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"E01","points":1,"rnd":1},{"id":15,"ts_utc":"2026-06-06T06:40:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"H25","points":3,"rnd":1},{"id":16,"ts_utc":"2026-06-06T06:42:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3NT","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"DX","points":1,"rnd":1},{"id":17,"ts_utc":"2026-06-06T06:43:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"J24","points":1,"rnd":1},{"id":18,"ts_utc":"2026-06-06T06:43:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2VO/P","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"D15","points":3,"rnd":1},{"id":19,"ts_utc":"2026-06-06T06:44:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2HS","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"F29","points":1,"rnd":1},{"id":20,"ts_utc":"2026-06-06T06:44:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3AD","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"DX","points":1,"rnd":1},{"id":21,"ts_utc":"2026-06-06T06:45:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6KW","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"K25","points":1,"rnd":1},{"id":22,"ts_utc":"2026-06-06T06:47:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3NT","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"DX","points":1,"rnd":1},{"id":23,"ts_utc":"2026-06-06T06:47:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2GX/P","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"G02","points":3,"rnd":1},{"id":24,"ts_utc":"2026-06-06T06:48:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5I","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"H31","points":1,"rnd":1},{"id":25,"ts_utc":"2026-06-06T06:49:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3QH","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"DX","points":1,"rnd":1},{"id":26,"ts_utc":"2026-06-06T06:49:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"H25","points":3,"rnd":1},{"id":27,"ts_utc":"2026-06-06T06:50:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"J24","points":1,"rnd":1},{"id":28,"ts_utc":"2026-06-06T06:55:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BDA","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"K25","points":1,"rnd":1},{"id":29,"ts_utc":"2026-06-06T06:55:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2WR","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"L21","points":1,"rnd":1},{"id":30,"ts_utc":"2026-06-06T06:58:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1LI/M","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"K24","points":5,"rnd":1},{"id":31,"ts_utc":"2026-06-06T06:59:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BKT","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"D14","points":1,"rnd":1},{"id":32,"ts_utc":"2026-06-06T07:02:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BKT","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"D14","points":1,"rnd":2},{"id":33,"ts_utc":"2026-06-06T07:03:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"J24","points":1,"rnd":2},{"id":34,"ts_utc":"2026-06-06T07:03:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2GX/P","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"G02","points":3,"rnd":2},{"id":35,"ts_utc":"2026-06-06T07:05:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6C","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"L15","points":1,"rnd":2},{"id":36,"ts_utc":"2026-06-06T07:05:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3NT","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"DX","points":1,"rnd":2},{"id":37,"ts_utc":"2026-06-06T07:07:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"H25","points":3,"rnd":2},{"id":38,"ts_utc":"2026-06-06T07:08:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3QH","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"DX","points":1,"rnd":2},{"id":39,"ts_utc":"2026-06-06T07:10:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3AD","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"DX","points":1,"rnd":2},{"id":40,"ts_utc":"2026-06-06T07:11:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6KW","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"K25","points":1,"rnd":2},{"id":41,"ts_utc":"2026-06-06T07:11:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY3CY","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"K26","points":1,"rnd":2},{"id":42,"ts_utc":"2026-06-06T07:12:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BDA","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"K25","points":1,"rnd":2},{"id":43,"ts_utc":"2026-06-06T07:14:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2VO/P","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"D15","points":3,"rnd":2},{"id":44,"ts_utc":"2026-06-06T07:14:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2GX/P","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"G02","points":3,"rnd":2},{"id":45,"ts_utc":"2026-06-06T07:16:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1LI/M","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"L23","points":5,"rnd":2},{"id":46,"ts_utc":"2026-06-06T07:17:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BKT","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"D14","points":1,"rnd":2},{"id":47,"ts_utc":"2026-06-06T07:17:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"J24","points":1,"rnd":2},{"id":48,"ts_utc":"2026-06-06T07:18:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3AD","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"DX","points":1,"rnd":2},{"id":49,"ts_utc":"2026-06-06T07:20:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"H25","points":3,"rnd":2},{"id":50,"ts_utc":"2026-06-06T07:21:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3QH","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"DX","points":1,"rnd":2},{"id":51,"ts_utc":"2026-06-06T07:22:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1LI/M","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"L23","points":5,"rnd":2},{"id":52,"ts_utc":"2026-06-06T07:26:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"J24","points":1,"rnd":2},{"id":53,"ts_utc":"2026-06-06T07:27:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6C","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"L15","points":1,"rnd":2},{"id":54,"ts_utc":"2026-06-06T07:27:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3QH","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"DX","points":1,"rnd":2},{"id":55,"ts_utc":"2026-06-06T07:28:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2GX/P","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"G02","points":3,"rnd":2},{"id":56,"ts_utc":"2026-06-06T07:28:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1LI/M","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"L23","points":5,"rnd":2},{"id":57,"ts_utc":"2026-06-06T07:30:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2RZ/M","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"I23","points":5,"rnd":2},{"id":58,"ts_utc":"2026-06-06T07:31:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY4K/P","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"N16","points":3,"rnd":2},{"id":59,"ts_utc":"2026-06-06T07:32:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"H25","points":3,"rnd":2},{"id":60,"ts_utc":"2026-06-06T07:32:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6KW","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"K25","points":1,"rnd":2},{"id":61,"ts_utc":"2026-06-06T07:32:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2FN","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"I12","points":1,"rnd":2},{"id":62,"ts_utc":"2026-06-06T07:33:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2WR","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"L21","points":1,"rnd":2},{"id":63,"ts_utc":"2026-06-06T07:35:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"J24","points":1,"rnd":2},{"id":64,"ts_utc":"2026-06-06T07:38:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3QH","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"DX","points":1,"rnd":2},{"id":65,"ts_utc":"2026-06-06T07:38:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3NT","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"DX","points":1,"rnd":2},{"id":66,"ts_utc":"2026-06-06T07:39:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"H25","points":3,"rnd":2},{"id":67,"ts_utc":"2026-06-06T07:39:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BDA","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"K25","points":1,"rnd":2},{"id":68,"ts_utc":"2026-06-06T07:43:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6KW","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"K25","points":1,"rnd":2},{"id":69,"ts_utc":"2026-06-06T07:45:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BKT","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"D14","points":1,"rnd":2},{"id":70,"ts_utc":"2026-06-06T07:45:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2FN","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"I12","points":1,"rnd":2},{"id":71,"ts_utc":"2026-06-06T07:46:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6C","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"L15","points":1,"rnd":2},{"id":72,"ts_utc":"2026-06-06T07:47:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5I","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"H31","points":1,"rnd":2},{"id":73,"ts_utc":"2026-06-06T07:49:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2GX/P","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"G02","points":3,"rnd":2},{"id":74,"ts_utc":"2026-06-06T07:52:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3AD","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"DX","points":1,"rnd":2},{"id":75,"ts_utc":"2026-06-06T07:52:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY4K/P","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"N16","points":3,"rnd":2},{"id":76,"ts_utc":"2026-06-06T07:52:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2GX/P","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"G02","points":3,"rnd":2},{"id":77,"ts_utc":"2026-06-06T07:57:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2WR","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"L21","points":1,"rnd":2},{"id":78,"ts_utc":"2026-06-06T07:59:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2RZ/M","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"I24","points":5,"rnd":2},{"id":79,"ts_utc":"2026-06-06T08:00:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY4K/P","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"N16","points":3,"rnd":3},{"id":80,"ts_utc":"2026-06-06T08:00:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY3CY","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"K26","points":1,"rnd":3},{"id":81,"ts_utc":"2026-06-06T08:02:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"J24","points":1,"rnd":3},{"id":82,"ts_utc":"2026-06-06T08:02:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6KW","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"K25","points":1,"rnd":3},{"id":83,"ts_utc":"2026-06-06T08:03:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2FN","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"I12","points":1,"rnd":3},{"id":84,"ts_utc":"2026-06-06T08:04:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"H25","points":3,"rnd":3},{"id":85,"ts_utc":"2026-06-06T08:04:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY4K/P","rst_s":"59","rst_r":"59","sent_wal":"J25","rcv_wal":"N16","points":3,"rnd":3},{"id":86,"ts_utc":"2026-06-06T08:09:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BDA","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"K25","points":1,"rnd":3},{"id":87,"ts_utc":"2026-06-06T08:10:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"J24","points":1,"rnd":3},{"id":88,"ts_utc":"2026-06-06T08:12:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6KW","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"K25","points":1,"rnd":3},{"id":89,"ts_utc":"2026-06-06T08:13:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY4K/P","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"N16","points":3,"rnd":3},{"id":90,"ts_utc":"2026-06-06T08:15:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3NT","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"DX","points":1,"rnd":3},{"id":91,"ts_utc":"2026-06-06T08:16:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BKT","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"D14","points":1,"rnd":3},{"id":92,"ts_utc":"2026-06-06T08:19:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"H25","points":3,"rnd":3},{"id":93,"ts_utc":"2026-06-06T08:20:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2RZ/M","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"I25","points":5,"rnd":3},{"id":94,"ts_utc":"2026-06-06T08:20:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2FN","rst_s":"59","rst_r":"59","sent_wal":"J24","rcv_wal":"I12","points":1,"rnd":3},{"id":95,"ts_utc":"2026-06-06T08:25:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6KW","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"K25","points":1,"rnd":3},{"id":96,"ts_utc":"2026-06-06T08:26:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3QH","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"DX","points":1,"rnd":3},{"id":97,"ts_utc":"2026-06-06T08:28:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"J24","points":1,"rnd":3},{"id":98,"ts_utc":"2026-06-06T08:29:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"K24","rcv_wal":"H25","points":3,"rnd":3},{"id":99,"ts_utc":"2026-06-06T08:35:00+00:00","freq_khz":3600,"mode":"SSB","call":"YL3AD","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"DX","points":1,"rnd":3},{"id":100,"ts_utc":"2026-06-06T08:36:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1DK","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"C21","points":1,"rnd":3},{"id":101,"ts_utc":"2026-06-06T08:37:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY6KW","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"K25","points":1,"rnd":3},{"id":102,"ts_utc":"2026-06-06T08:37:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY3CY","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"K26","points":1,"rnd":3},{"id":103,"ts_utc":"2026-06-06T08:37:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2WR","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"L21","points":1,"rnd":3},{"id":104,"ts_utc":"2026-06-06T08:38:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY5GT","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"J24","points":1,"rnd":3},{"id":105,"ts_utc":"2026-06-06T08:39:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2FN","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"I12","points":1,"rnd":3},{"id":106,"ts_utc":"2026-06-06T08:41:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY4K/P","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"N16","points":3,"rnd":3},{"id":107,"ts_utc":"2026-06-06T08:44:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2RZ/M","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"H24","points":5,"rnd":3},{"id":108,"ts_utc":"2026-06-06T08:45:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY1YZ/P","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"H25","points":3,"rnd":3},{"id":109,"ts_utc":"2026-06-06T08:51:00+00:00","freq_khz":3600,"mode":"SSB","call":"LY2BKT","rst_s":"59","rst_r":"59","sent_wal":"K25","rcv_wal":"D14","points":1,"rnd":3}];
+  var CFG0  = {"mycall": "LY5AT/M", "name": "", "category": "M"};
+  var LETTERS="ABCDEFGHIJKLMNOPQRSTUVWXYZ", LAT0=56.5, LON0=20+50/60, STEP=10/60;
+  function latlonToWal(lat,lon){ lat=parseFloat(lat); lon=parseFloat(lon);
+    if(isNaN(lat)||isNaN(lon)) return null;
+    var row=Math.floor(-(lat-LAT0)/STEP), col=Math.floor((lon-LON0)/STEP);
+    if(row<0||row>=26||col<0) return null; return LETTERS[row]+String(col).padStart(2,"0"); }
+  function pts(call){ var c=(call||"").toUpperCase().trim();
+    if(c.endsWith("/M")||c.endsWith("/MM")) return 5; if(c.endsWith("/P")) return 3; return 1; }
+  function prefix(call){ var c=(call||"").toUpperCase().trim().split("/")[0];
+    var m=c.match(/^([A-Z0-9]*?\d)[A-Z]*$/); return m?m[1]:c; }
+  function roundForHour(h){ return ({6:1,7:2,8:3})[h]||0; }
+  function J(obj,code){ return Promise.resolve(new Response(JSON.stringify(obj),
+    {status:code||200,headers:{"Content-Type":"application/json"}})); }
+
+  var MOCK={
+    cfg:Object.assign({mycall:"LY5AT/M",mode:"SSB",freq:"3600",name:"",category:"M",
+        round_override:"0",ly_default:"1",sent_wal:"",sent_source:"manual"}, CFG0),
+    qsos:SEED.map(function(q){return Object.assign({},q);}),
+    nextId:0,
+    gps:{lat:null,lon:null,ts:null,hold:null},
+    macros:{"1":{label:"CQ",url:null},"2":{label:"Rpt",url:null},"3":{label:"TU",url:null}},
+    validSet:new Set(VALID),
+    currentRound:function(){ var ov=parseInt(this.cfg.round_override||"0");
+      if(ov>=1&&ov<=3) return ov; return roundForHour(new Date().getUTCHours()); },
+    stats:function(){ var sq=new Set(),own=new Set(),dx=new Set(),rounds={1:0,2:0,3:0},p=0;
+      this.qsos.forEach(function(r){ p+=r.points||0; if(r.sent_wal)own.add(r.sent_wal);
+        var rcv=(r.rcv_wal||"").toUpperCase();
+        if(rcv==="DX")dx.add(prefix(r.call)); else if(rcv)sq.add(rcv);
+        if(rounds[r.rnd]!==undefined)rounds[r.rnd]++; });
+      var mult=sq.size+own.size+dx.size;
+      return {qsos:this.qsos.length,points:p,squares:sq.size,own_squares:own.size,
+        dx_countries:dx.size,mult:mult,score:p*mult,
+        worked_squares:Array.from(sq).sort(),own_list:Array.from(own).sort(),rounds:rounds}; },
+    setSent:function(w,src){ this.cfg.sent_wal=w; this.cfg.sent_source=src; },
+    macroURL:function(n){ return this.macros[n]&&this.macros[n].url; },
+    _sorted:function(){ return this.qsos.slice().sort(function(a,b){
+      return (a.ts_utc<b.ts_utc?-1:a.ts_utc>b.ts_utc?1:a.id-b.id); }); },
+    cabrillo:function(){ var cat=this.cfg.category||"M";
+      var stn={M:"MOBILE",P:"PORTABLE",S:"FIXED",K:"FIXED",SWL:"CHECKLOG",KL:"FIXED"}[cat]||"MOBILE";
+      var st=this.stats(), mycall=this.cfg.mycall||"LY5AT/M";
+      function L(s,n){s=String(s);while(s.length<n)s+=" ";return s;}
+      function R(s,n){s=String(s);while(s.length<n)s=" "+s;return s;}
+      var out=["START-OF-LOG: 3.0","CONTEST: LY-WAL","CALLSIGN: "+mycall,
+        "CATEGORY-OPERATOR: "+(cat==="KL"?"MULTI-OP":"SINGLE-OP"),"CATEGORY-STATION: "+stn,
+        "CATEGORY-BAND: 80M","CATEGORY-POWER: LOW","CATEGORY-MODE: MIXED",
+        "CLAIMED-SCORE: "+st.score,"NAME: "+(this.cfg.name||""),
+        "SOAPBOX: WAL category "+cat,"CREATED-BY: WAL Logger"];
+      this._sorted().forEach(function(r){ var d=new Date(r.ts_utc);
+        var date=d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");
+        var time=String(d.getUTCHours()).padStart(2,"0")+String(d.getUTCMinutes()).padStart(2,"0");
+        var md=r.mode==="CW"?"CW":"PH";
+        out.push("QSO: "+R(r.freq_khz||3600,5)+" "+L(md,2)+" "+date+" "+time+" "+L(mycall,10)+" "+
+          L(r.rst_s,3)+" "+L(r.sent_wal,4)+" "+L((r.call||"").toUpperCase(),10)+" "+L(r.rst_r,3)+" "+L(r.rcv_wal,4)); });
+      out.push("END-OF-LOG:"); return out.join("\n")+"\n"; },
+    adif:function(){ function f(t,v){v=String(v);return "<"+t+":"+v.length+">"+v;}
+      var out=["WAL Contest ADIF export","<ADIF_VER:5>3.1.0","<PROGRAMID:10>WAL Logger","<EOH>"];
+      this._sorted().forEach(function(r){ var d=new Date(r.ts_utc);
+        var qd=d.getUTCFullYear()+String(d.getUTCMonth()+1).padStart(2,"0")+String(d.getUTCDate()).padStart(2,"0");
+        var to=String(d.getUTCHours()).padStart(2,"0")+String(d.getUTCMinutes()).padStart(2,"0")+String(d.getUTCSeconds()).padStart(2,"0");
+        out.push([f("CALL",(r.call||"").toUpperCase()),f("QSO_DATE",qd),f("TIME_ON",to),f("BAND","80m"),
+          f("FREQ",((r.freq_khz||3600)/1000).toFixed(3)),f("MODE",r.mode==="CW"?"CW":"SSB"),
+          f("RST_SENT",r.rst_s),f("RST_RCVD",r.rst_r),f("STX_STRING",r.sent_wal),
+          f("SRX_STRING",r.rcv_wal),f("COMMENT","WAL "+r.rcv_wal),"<EOR>"].join(" ")); });
+      return out.join("\n")+"\n"; },
+    download:function(kind){ var txt=kind==="cabrillo"?this.cabrillo():this.adif();
+      var fn=(this.cfg.mycall||"LY5AT").replace(/\//g,"_")+(kind==="cabrillo"?"_WAL.log":"_WAL.adi");
+      var b=new Blob([txt],{type:"text/plain;charset=utf-8"}), a=document.createElement("a");
+      a.href=URL.createObjectURL(b); a.download=fn; document.body.appendChild(a); a.click();
+      setTimeout(function(){URL.revokeObjectURL(a.href); a.remove();},1500); },
+    route:function(url,opts){ var self=this; var path=String(url).split("?")[0];
+      var data={}; if(opts&&opts.body&&typeof opts.body==="string"){ try{data=JSON.parse(opts.body);}catch(e){} }
+
+      if(path==="/api/state"){ return J({ sent_wal:self.cfg.sent_wal, sent_source:self.cfg.sent_source,
+        gps_lat:self.gps.lat, gps_lon:self.gps.lon, gps_ts:self.gps.ts, gps_hold:self.gps.hold,
+        stats:self.stats(), mycall:self.cfg.mycall, mode:self.cfg.mode, freq:self.cfg.freq,
+        name:self.cfg.name, category:self.cfg.category, round_override:self.cfg.round_override,
+        ly_default:self.cfg.ly_default, valid_count:self.validSet.size,
+        utc:new Date().toISOString(), current_round:self.currentRound() }); }
+      if(path==="/api/valid") return J(VALID);
+      if(path==="/api/qsos") return J(self.qsos.slice().sort(function(a,b){return b.id-a.id;}).slice(0,300));
+      if(path==="/api/macros"){ var o={}; ["1","2","3"].forEach(function(n){
+        o[n]={has:!!self.macros[n].url,label:self.macros[n].label}; }); return J(o); }
+
+      if(path==="/api/dupe"){ var call=(data.call||"").toUpperCase().trim();
+        var mode=(data.mode||"SSB").toUpperCase()==="CW"?"CW":"SSB";
+        var rnd=self.currentRound(), mysq=self.cfg.sent_wal||"";
+        var rows=self.qsos.filter(function(q){return q.call===call&&q.mode===mode&&q.rnd===rnd&&q.sent_wal===mysq;});
+        var any=self.qsos.filter(function(q){return q.call===call;});
+        return J({count:rows.length, prev_rcv:rows.length?rows[rows.length-1].rcv_wal:"",
+          last_rcv:any.length?any[any.length-1].rcv_wal:"", round:rnd, my_square:mysq}); }
+      if(path==="/api/qso"){ var call=(data.call||"").toUpperCase().trim(), rcv=(data.rcv_wal||"").toUpperCase().trim();
+        if(!call||!rcv) return J({ok:false,error:"call and received WAL required"},400);
+        var sent=((data.sent_wal||self.cfg.sent_wal||"")+"").toUpperCase().trim();
+        var mode=(data.mode||"SSB").toUpperCase()==="CW"?"CW":"SSB", rd=mode==="CW"?"599":"59";
+        var P=pts(call), rnd=self.currentRound(), freq=parseInt(data.freq_khz||3600)||3600;
+        self.qsos.push({id:self.nextId++, ts_utc:new Date().toISOString(), freq_khz:freq, mode:mode,
+          call:call, rst_s:data.rst_s||rd, rst_r:data.rst_r||rd, sent_wal:sent, rcv_wal:rcv, points:P, rnd:rnd});
+        return J({ok:true, points:P, valid_square:(rcv==="DX"||self.validSet.has(rcv)), round:rnd}); }
+      if(path==="/api/sent"){ var w=(data.wal||"").trim().toUpperCase(); self.setSent(w,"manual");
+        self.gps.hold=latlonToWal(self.gps.lat,self.gps.lon); return J({ok:true,sent_wal:w}); }
+      if(path==="/api/gps_auto"){ self.gps.hold=null; var sq=latlonToWal(self.gps.lat,self.gps.lon);
+        if(sq)self.setSent(sq,"gps"); else self.cfg.sent_source="gps"; return J({ok:true,square:sq}); }
+      if(path==="/api/gps"){ var sq=latlonToWal(data.lat,data.lon);
+        self.gps.lat=data.lat; self.gps.lon=data.lon; self.gps.ts=new Date().toISOString();
+        if(sq){ if(self.cfg.sent_source==="manual"&&self.cfg.sent_wal){
+            if(self.gps.hold==null) self.gps.hold=sq;
+            else if(sq!==self.gps.hold){ self.setSent(sq,"gps"); self.gps.hold=null; } }
+          else self.setSent(sq,"gps"); }
+        return J({ok:true,square:sq}); }
+      if(path==="/api/mycall"){ self.cfg.mycall=(data.mycall||"").trim().toUpperCase(); return J({ok:true}); }
+      if(path==="/api/band"){ self.cfg.mode=(data.mode||"SSB").toUpperCase()==="CW"?"CW":"SSB";
+        self.cfg.freq=String(parseInt(data.freq||3600)||3600); return J({ok:true}); }
+      if(path==="/api/cfgset"){ var k=String(data.key), v=(data.value||"").trim();
+        if(["mycall","name","category","round_override","ly_default"].indexOf(k)>=0)
+          self.cfg[k]=(k==="mycall"?v.toUpperCase():v); return J({ok:true}); }
+      if(path==="/api/macrolabel"){ var n=String(data.n); if(self.macros[n])self.macros[n].label=(data.label||"").trim(); return J({ok:true}); }
+      if(path==="/api/qso/delete"){ self.qsos=self.qsos.filter(function(q){return q.id!==data.id;}); return J({ok:true}); }
+      if(path==="/api/qso/update"){ var row=null; self.qsos.forEach(function(q){if(q.id===data.id)row=q;});
+        if(!row) return J({ok:false,error:"not found"},404);
+        row.call=(data.call||row.call).trim().toUpperCase();
+        row.rcv_wal=(data.rcv_wal||row.rcv_wal).trim().toUpperCase();
+        row.sent_wal=((data.sent_wal!=null?data.sent_wal:row.sent_wal)+"").trim().toUpperCase();
+        row.mode=(data.mode||row.mode).toUpperCase()==="CW"?"CW":"SSB";
+        row.rst_s=data.rst_s||row.rst_s; row.rst_r=data.rst_r||row.rst_r;
+        row.freq_khz=parseInt(data.freq_khz||row.freq_khz||3600)||3600; row.points=pts(row.call);
+        return J({ok:true,points:row.points}); }
+      if(path==="/api/backup") return J({ok:true,backup:"(demo - neirasoma)"});
+      if(path==="/api/wipe"){ var n=self.qsos.length; self.qsos=[]; return J({ok:true,cleared:n,backup:"(demo)"}); }
+      if(path.indexOf("/api/macro/")===0){ var n=path.substring(11);
+        if(self.macros[n]){ try{ if(opts&&opts.body) self.macros[n].url=URL.createObjectURL(opts.body); }catch(e){} }
+        return J({ok:true}); }
+      return J({ok:false,error:"unknown "+path},404); }
+  };
+  MOCK.qsos.forEach(function(q){ if(q.id>=MOCK.nextId) MOCK.nextId=q.id+1; });
+  if(!MOCK.cfg.sent_wal && MOCK.qsos.length) MOCK.cfg.sent_wal=MOCK.qsos[MOCK.qsos.length-1].sent_wal||"";
+  window.MOCK=MOCK;
+  window.fetch=function(url,opts){ return MOCK.route(String(url),opts||{}); };
+
+  function wire(){
+    var c=document.getElementById("exCab"), a=document.getElementById("exAdif"), r=document.getElementById("demoReset");
+    if(c)c.onclick=function(){MOCK.download("cabrillo");};
+    if(a)a.onclick=function(){MOCK.download("adif");};
+    if(r)r.onclick=function(){location.reload();};
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",wire); else wire();
+})();
+</script>
+
+<script>
+const $ = s => document.querySelector(s);
+let mode="SSB", valid=[], worked=new Set(), qsos=[], totalQsos=0, editingId=null, lyDefault=true;
+function resetCall(){
+  $("#call").value=lyDefault?"LY":"";
+  $("#call").focus();
+  const v=$("#call").value; try{$("#call").setSelectionRange(v.length,v.length);}catch(e){}
+}
+
+function api(p,b){return fetch(p,b?{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(b)}:undefined).then(r=>r.json());}
+
+// ---- mode + band (header)
+function applyMode(m,push){
+  mode=m; $("#mSSB").classList.toggle("on",m==="SSB"); $("#mCW").classList.toggle("on",m==="CW");
+  const def=m==="CW"?"599":"59";
+  if($("#rsts").value.match(/^\d+$/))$("#rsts").value=def;
+  if($("#rstr").value.match(/^\d+$/))$("#rstr").value=def;
+  if(push)saveBand();
+}
+function saveBand(){api("/api/band",{mode,freq:parseInt($("#freq").value)||3600});}
+$("#mSSB").onclick=()=>applyMode("SSB",true);
+$("#mCW").onclick=()=>applyMode("CW",true);
+$("#freq").onchange=saveBand;
+$("#mycall").onchange=e=>api("/api/mycall",{mycall:e.target.value});
+$("#sent").onchange=e=>api("/api/sent",{wal:e.target.value});
+$("#gpsauto").onclick=()=>api("/api/gps_auto").then(refresh);
+$("#name").onchange=e=>api("/api/cfgset",{key:"name",value:e.target.value});
+$("#category").onchange=e=>api("/api/cfgset",{key:"category",value:e.target.value});
+$("#roundov").onchange=e=>api("/api/cfgset",{key:"round_override",value:e.target.value}).then(refresh);
+$("#lydef").onchange=e=>{lyDefault=e.target.checked;api("/api/cfgset",{key:"ly_default",value:e.target.checked?"1":"0"});resetCall();};
+$("#backup").onclick=()=>api("/api/backup").then(r=>{$("#hint").innerHTML='<span class="ok">💾 Kopija išsaugota: '+(r.backup||"-")+'</span>';});
+$("#wipe").onclick=()=>{
+  const n=$("#s-qso").textContent;
+  if(!confirm("Išvalyti žurnalą? Bus ištrinta "+n+" QSO.\nAtsarginė kopija išsaugoma automatiškai. Papūga ir nustatymai lieka."))return;
+  api("/api/wipe").then(r=>{$("#hint").innerHTML='<span class="ok">Išvalyta ('+r.cleared+' QSO). Kopija: '+(r.backup||"-")+'</span>';refresh();$("#call").focus();});
+};
+
+// ---- hints: dupe + WAL validity share one line; the dupe stays visible at the WAL field
+let ht, dupeText="", validText="";
+function renderHint(){
+  let h="";
+  if(dupeText) h+='<span class="dupe">'+dupeText+'</span>';
+  if(validText) h+=(h?' &nbsp;·&nbsp; ':'')+validText;
+  $("#hint").innerHTML=h;
+}
+function applyDupe(d,call){
+  const dup=!!(d&&d.count>0);
+  dupeText = dup ? ('⚠ '+call+' DUPE - jau iš '+(d.my_square||"?")+' šiame ture ('+mode+'); pakeitus savo kvadratą - galima vėl') : "";
+  $("#call").classList.toggle("dup",dup);
+}
+function showValid(){
+  const v=$("#rcv").value.trim().toUpperCase();
+  if(!v) validText="";
+  else if(v==="DX") validText='<span class="ok">DX - užsienio (1 tšk)</span>';
+  else validText = valid.includes(v) ? '<span class="ok">'+v+' galioja</span>' : '<span class="bad">'+v+' nėra WAL sąraše</span>';
+  renderHint();
+}
+function checkDupe(){
+  const call=$("#call").value.trim().toUpperCase();
+  if(call.length<3){applyDupe(null,call);renderHint();return;}
+  api("/api/dupe",{call,mode}).then(d=>{applyDupe(d,call);renderHint();});
+}
+$("#call").addEventListener("input",()=>{clearTimeout(ht);ht=setTimeout(checkDupe,180);});
+$("#rcv").addEventListener("input",showValid);
+// Tab cycles ONLY between Call and Rcv WAL - Tab itself is trapped in the capture-phase handler below
+function tabToRcv(){
+  const call=$("#call").value.trim().toUpperCase();
+  $("#rcv").focus();
+  if(call.length>=3) api("/api/dupe",{call,mode}).then(d=>{
+    applyDupe(d,call);
+    if(d.last_rcv&&!$("#rcv").value){$("#rcv").value=d.last_rcv;$("#rcv").select();}
+    showValid();
+  });
+  else { applyDupe(null,call); renderHint(); }
+}
+
+// ---- logging
+function logQso(){
+  const call=$("#call").value.trim().toUpperCase(), rcv=$("#rcv").value.trim().toUpperCase();
+  if(!call||!rcv){$("#hint").innerHTML='<span class="bad">Reikia Call ir Rcv WAL</span>';return;}
+  api("/api/qso",{call,rcv_wal:rcv,mode,rst_s:$("#rsts").value,rst_r:$("#rstr").value,
+    sent_wal:$("#sent").value,freq_khz:parseInt($("#freq").value)||3600}).then(r=>{
+    if(!r.ok){$("#hint").innerHTML='<span class="bad">'+(r.error||"klaida")+'</span>';return;}
+    $("#rcv").value="";dupeText="";validText="";$("#call").classList.remove("dup");$("#hint").textContent="+"+r.points+" tšk";resetCall();refresh();
+  });
+}
+$("#log").onclick=logQso;
+function wipeEntry(){stopMacro();$("#rcv").value="";dupeText="";validText="";$("#call").classList.remove("dup");$("#hint").textContent="";resetCall();}
+document.addEventListener("keydown",e=>{
+  // Trap Tab so it only bounces between Call and Rcv WAL (capture phase = reliably prevents native tabbing)
+  if(e.key==="Tab"&&(e.target.id==="call"||e.target.id==="rcv")){
+    e.preventDefault();
+    if(e.target.id==="call") tabToRcv(); else $("#call").focus();
+    return;
+  }
+  if(e.key==="Enter"&&["call","rcv","rstr"].includes(e.target.id))logQso();
+  if(e.key==="Escape")wipeEntry();
+  // Ctrl+W = wipe entry (N1MM muscle memory) instead of closing the tab
+  if((e.ctrlKey||e.metaKey)&&(e.key==="w"||e.key==="W")){e.preventDefault();e.stopPropagation();wipeEntry();}
+  if(e.key==="F1"||e.key==="F2"||e.key==="F3"){e.preventDefault();playMacro(e.key[1]);}
+},true);
+// safety net: if the tab is about to close (e.g. Ctrl+W slipped through), ask first - but only once logging
+/* demo: no beforeunload prompt */
+
+// ---- voice keyer (balso papūga)
+let curAudio=null, recorders={};
+function loadKeyer(){return api("/api/macros").then(renderKeyer);}
+function renderKeyer(m){
+  for(const n of ["1","2","3"]){
+    const slot=document.querySelector('.slot[data-n="'+n+'"]'), info=m[n]||{};
+    slot.innerHTML=
+      '<button class="kplay'+(info.has?' has':'')+'" data-n="'+n+'">F'+n+' '+(info.label||"")+'</button>'+
+      '<input class="klabel" data-n="'+n+'" value="'+(info.label||"")+'" title="pavadinimas">'+
+      '<button class="kmini rec" data-n="'+n+'" title="Įrašyti iš mikrofono">⏺</button>'+
+      '<button class="kmini up" data-n="'+n+'" title="Įkelti garso failą">📁</button>';
+  }
+  document.querySelectorAll(".kplay").forEach(b=>b.onclick=()=>playMacro(b.dataset.n));
+  document.querySelectorAll(".klabel").forEach(i=>i.onchange=()=>api("/api/macrolabel",{n:i.dataset.n,label:i.value}).then(loadKeyer));
+  document.querySelectorAll(".kmini.rec").forEach(b=>b.onclick=()=>toggleRec(b));
+  document.querySelectorAll(".kmini.up").forEach(b=>b.onclick=()=>uploadMacro(b.dataset.n));
+}
+function playMacro(n){
+  stopMacro();
+  const el=document.querySelector('.kplay[data-n="'+n+'"]');
+  var _mu=MOCK.macroURL(n); if(!_mu){$("#hint").innerHTML='<span class="bad">F'+n+': nėra įrašo</span>';return;} curAudio=new Audio(_mu);
+  curAudio.onended=()=>{if(el)el.classList.remove("playing");curAudio=null;};
+  curAudio.onerror=()=>{$("#hint").innerHTML='<span class="bad">F'+n+': nėra įrašo</span>';};
+  curAudio.play().then(()=>{if(el)el.classList.add("playing");}).catch(()=>{});
+}
+function stopMacro(){ if(curAudio){curAudio.pause();curAudio=null;} document.querySelectorAll(".kplay.playing").forEach(b=>b.classList.remove("playing")); }
+$("#kstop").onclick=stopMacro;
+async function toggleRec(btn){
+  const n=btn.dataset.n;
+  if(recorders[n]){recorders[n].stop();return;}
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const mr=new MediaRecorder(stream), chunks=[];
+    mr.ondataavailable=e=>chunks.push(e.data);
+    mr.onstop=()=>{
+      stream.getTracks().forEach(t=>t.stop());
+      const blob=new Blob(chunks,{type:mr.mimeType||"audio/webm"});
+      fetch("/api/macro/"+n,{method:"POST",headers:{"Content-Type":blob.type},body:blob}).then(()=>{recorders[n]=null;loadKeyer();});
+    };
+    mr.start(); recorders[n]=mr; btn.classList.add("recording"); btn.textContent="⏹";
+  }catch(err){$("#hint").innerHTML='<span class="bad">Mikrofonas neprieinamas: '+err.message+'</span>';}
+}
+function uploadMacro(n){
+  const inp=document.createElement("input"); inp.type="file"; inp.accept="audio/*";
+  inp.onchange=()=>{const f=inp.files[0]; if(f)fetch("/api/macro/"+n,{method:"POST",headers:{"Content-Type":f.type||"audio/wav"},body:f}).then(()=>loadKeyer());};
+  inp.click();
+}
+
+// ---- log table + inline edit
+function row(r){
+  const t=new Date(r.ts_utc), hh=String(t.getUTCHours()).padStart(2,"0")+":"+String(t.getUTCMinutes()).padStart(2,"0");
+  return '<tr data-id="'+r.id+'"><td>'+hh+'</td><td>'+(r.rnd||"-")+'</td><td><b>'+r.call+'</b></td><td>'+r.mode+
+    '</td><td>'+r.sent_wal+'</td><td>'+r.rst_s+'/'+r.rst_r+'</td><td class="sq">'+r.rcv_wal+'</td><td>'+r.points+
+    '</td><td class="act edit" data-id="'+r.id+'">✎</td><td class="act del" data-id="'+r.id+'">✕</td></tr>';
+}
+function bindRows(){
+  document.querySelectorAll("td.del").forEach(td=>td.onclick=()=>api("/api/qso/delete",{id:+td.dataset.id}).then(refresh));
+  document.querySelectorAll("td.edit").forEach(td=>td.onclick=()=>startEdit(+td.dataset.id));
+}
+function startEdit(id){
+  const r=qsos.find(q=>q.id===id); if(!r)return;
+  editingId=id;
+  const tr=document.querySelector('tr[data-id="'+id+'"]'); tr.className="erow";
+  tr.innerHTML='<td colspan="10">'+
+    'Call <input class="e-call" value="'+r.call+'" style="width:90px">'+
+    ' <select class="e-mode"><option'+(r.mode==="SSB"?" selected":"")+'>SSB</option><option'+(r.mode==="CW"?" selected":"")+'>CW</option></select>'+
+    ' Snt <input class="e-sent" value="'+r.sent_wal+'" style="width:55px">'+
+    ' Rcv <input class="e-rcv" value="'+r.rcv_wal+'" style="width:60px">'+
+    ' RST <input class="e-rsts" value="'+r.rst_s+'" style="width:48px"><input class="e-rstr" value="'+r.rst_r+'" style="width:48px">'+
+    ' <button class="ebtn save">Išsaugoti</button> <button class="ebtn c cancel">Atšaukti</button></td>';
+  tr.querySelector(".save").onclick=()=>api("/api/qso/update",{id,
+    call:tr.querySelector(".e-call").value,mode:tr.querySelector(".e-mode").value,
+    sent_wal:tr.querySelector(".e-sent").value,rcv_wal:tr.querySelector(".e-rcv").value,
+    rst_s:tr.querySelector(".e-rsts").value,rst_r:tr.querySelector(".e-rstr").value}).then(()=>{editingId=null;refresh();});
+  tr.querySelector(".cancel").onclick=()=>{editingId=null;refresh();};
+  tr.querySelector(".e-call").focus();
+}
+
+// ---- Lithuania map from the valid squares
+function buildMap(){
+  const cells=valid.filter(s=>s!=="DX").map(s=>({s,row:s.charCodeAt(0)-65,col:parseInt(s.slice(1))}));
+  const maxCol=Math.max.apply(null,cells.map(c=>c.col));
+  const cw=13, ch=15, LM=15, TM=12;                        // ch>cw -> real LT proportions; LM/TM = axis margins
+  const W=LM+(maxCol+1)*cw, H=TM+16*ch;
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%">';
+  for(let c=0;c<=maxCol;c++) svg+='<text class="axn" x="'+(LM+c*cw+cw/2)+'" y="'+(TM-3)+'">'+c+'</text>';
+  for(let r=0;r<16;r++) svg+='<text class="axl" x="'+(LM-3)+'" y="'+(TM+r*ch+ch/2)+'">'+String.fromCharCode(65+r)+'</text>';
+  for(const c of cells) svg+='<rect data-s="'+c.s+'" x="'+(LM+c.col*cw)+'" y="'+(TM+c.row*ch)+
+    '" width="'+(cw-0.6)+'" height="'+(ch-0.6)+'" rx="1"><title>'+c.s+'</title></rect>';
+  $("#map").innerHTML=svg+'</svg>';
+}
+function paintMap(){document.querySelectorAll("#map rect").forEach(r=>r.classList.toggle("w",worked.has(r.dataset.s)));}
+
+// ---- round badge + clock
+function paintRound(s){
+  const cr=s.current_round, ut=new Date(s.utc), ov=parseInt(s.round_override||"0");
+  const rb=$("#rbig"), rs=$("#rsub"), rc=s.stats.rounds||{};
+  const counts="T1:"+(rc[1]||0)+" T2:"+(rc[2]||0)+" T3:"+(rc[3]||0);
+  if(ov>=1&&ov<=3){
+    rb.textContent="TURAS "+ov; rb.classList.add("live");
+    rs.textContent="rankinis · "+counts;
+  } else if(cr>=1&&cr<=3){
+    const left=59-ut.getUTCMinutes();
+    rb.textContent="TURAS "+cr; rb.classList.add("live");
+    rs.textContent="liko "+left+" min · "+counts;
+  } else {
+    rb.textContent="TURAS -"; rb.classList.remove("live");
+    rs.textContent=(ut.getUTCHours()<6?"prieš startą · ":"po varžybų · ")+counts;
+  }
+}
+
+// ---- refresh
+function refresh(){
+  api("/api/state").then(s=>{
+    if(document.activeElement!==$("#sent"))$("#sent").value=s.sent_wal||"";
+    $("#sent").classList.toggle("empty",!$("#sent").value);
+    if(document.activeElement!==$("#mycall"))$("#mycall").value=s.mycall||"";
+    if(document.activeElement!==$("#freq"))$("#freq").value=s.freq||"3600";
+    if(document.activeElement!==$("#name"))$("#name").value=s.name||"";
+    if(s.category&&$("#category").value!==s.category)$("#category").value=s.category;
+    if(document.activeElement!==$("#roundov"))$("#roundov").value=s.round_override||"0";
+    lyDefault=(s.ly_default!=="0"); if(document.activeElement!==$("#lydef"))$("#lydef").checked=lyDefault;
+    if(s.mode&&s.mode!==mode)applyMode(s.mode,false);
+    let g="GPS: rankinis";
+    if(s.sent_source==="gps"&&s.gps_ts){const age=Math.round((Date.now()-new Date(s.gps_ts))/1000);
+      const col=age>30?"#ff5d5d":(age>12?"#ffb020":"#37d67a");
+      g='GPS: <b>'+(s.sent_wal||"?")+'</b> · <span style="color:'+col+'">'+age+'s</span>'+(age>30?" ⚠":"");}
+    else if(s.sent_wal){g="GPS: rankinis 🔒";}
+    $("#gps").innerHTML=g;
+    const man=(s.sent_source==="manual");
+    $("#gpsauto").textContent=man?"↻ GPS auto":"✓ GPS auto";
+    $("#gpsauto").title=man?"Spausk - grįžti į GPS auto":"GPS auto aktyvus";
+    $("#gpsauto").classList.toggle("man",man);
+    const st=s.stats;
+    totalQsos=st.qsos;
+    $("#s-qso").textContent=st.qsos;$("#s-pts").textContent=st.points;$("#s-score").textContent=st.score;
+    $("#s-sq").textContent=st.squares;$("#s-own").textContent=st.own_squares;$("#s-dx").textContent=st.dx_countries;
+    worked=new Set(st.worked_squares); paintMap(); paintRound(s);
+  });
+  api("/api/qsos").then(rows=>{ if(editingId!==null)return; qsos=rows; $("#log-body").innerHTML=rows.map(row).join(""); bindRows();});
+}
+
+// ---- init
+function tick(){const d=new Date(),p=n=>String(n).padStart(2,"0");
+  $("#clock").textContent=p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds());}
+api("/api/valid").then(v=>{valid=v; buildMap(); applyMode("SSB",false); refresh(); resetCall();});
+loadKeyer(); tick();
+setInterval(refresh,2500);
+setInterval(tick,1000);
+</script>
+</body>
+</html>

@@ -3,6 +3,21 @@
 Mažas savarankiškas loggeris Lietuvos mobiliųjų-portabiliųjų RS čempionatui (WAL).
 Veikia offline ant Windows laptopo. Telefonas (Android) duoda GPS -> Sent WAL kvadratą.
 
+## Demo (pabandyk naršyklėje)
+
+Gyvą loggerį gali paspaudyti tiesiai naršyklėje, nieko nediegdamas:
+**https://ly5at.github.io/wal-logger/**
+
+Demo veikia visiškai naršyklėje (be Python serverio) ir užkrautas tikru **LY5AT/M WAL 2026**
+logu - 110 QSO, visi trys turai. Gali:
+- loginti naujus ryšius, redaguoti (✎) ir trinti (✕);
+- matyti dublio įspėjimą - nustatyk **Turą** (1-3) header'yje ir įvesk jau darytą stotį;
+- stebėti rezultatą, taškus ir Lietuvos kvadratų žemėlapį (žali = padaryti);
+- eksportuoti **Cabrillo** ir **ADIF**.
+
+Mygtukas **↻ Iš naujo** atstato pradinį logą. Tai tik peržiūra - tikram varžybų darbui naudok
+įdiegtą versiją (žemiau): ji rašo į SQLite, daro atsargines kopijas ir aptarnauja telefono GPS.
+
 ## Diegimas (Windows)
 
 Reikia tik Python 3. Trys žingsniai:
